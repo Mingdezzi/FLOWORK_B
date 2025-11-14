@@ -1,0 +1,12 @@
+Flask
+Flask-SQLAlchemy
+SQLAlchemy
+openpyxl
+pandas
+APScheduler
+gunicorn
+psycopg2-binary
+bcrypt
+flask-login
+Flask-WTF
+holidays
