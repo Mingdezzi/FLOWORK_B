@@ -128,7 +128,6 @@
                 <h5 class="mb-0"><i class="bi bi-chat-dots-fill me-2"></i>댓글</h5>
             </div>
             <div class="card-body">
-                {% set comments = item.comments.order_by(Comment.created_at.asc()).all() %}
                 {% if comments %}
                 <ul class="list-group list-group-flush">
                     {% for comment in comments %}

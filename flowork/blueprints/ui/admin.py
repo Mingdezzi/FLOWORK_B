@@ -98,11 +98,9 @@ def announcement_detail(id):
     item = None
     current_brand_id = current_user.current_brand_id
     
-    # [수정] 본사 관리자 여부 확인 (브랜드 ID는 있고, 매장 ID는 없음)
     is_hq_admin = (current_user.brand_id is not None) and (current_user.store_id is None)
 
     if id == 'new':
-        # [수정] 신규 작성은 본사 관리자만 가능
         if not is_hq_admin:
             abort(403, description="공지사항 작성 권한이 없습니다. (본사 관리자 전용)")
         item = Announcement(title='', content='')
@@ -111,7 +109,6 @@ def announcement_detail(id):
         if not item: abort(404, description="공지사항을 찾을 수 없거나 권한이 없습니다.")
 
     if request.method == 'POST':
-        # [수정] 수정/저장은 본사 관리자만 가능
         if not is_hq_admin:
             abort(403, description="공지사항 수정 권한이 없습니다. (본사 관리자 전용)")
             
@@ -125,7 +122,6 @@ def announcement_detail(id):
             else:
                 flash("공지사항이 수정되었습니다.", "success")
             db.session.commit()
-            # 새로 생성된 경우 ID가 부여되므로 리다이렉트
             return redirect(url_for('ui.announcement_detail', id=item.id))
         except Exception as e:
             db.session.rollback()
@@ -133,13 +129,19 @@ def announcement_detail(id):
             traceback.print_exc()
             flash(f"저장 중 오류 발생: {e}", "error")
 
-    # [수정] 템플릿에 권한 정보 전달
-    return render_template('announcement_detail.html', active_page='announcements', item=item, is_hq_admin=is_hq_admin)
+    comments = []
+    if item and item.id:
+        comments = item.comments.order_by(Comment.created_at.asc()).all()
+
+    return render_template('announcement_detail.html', 
+                           active_page='announcements', 
+                           item=item, 
+                           is_hq_admin=is_hq_admin,
+                           comments=comments)
 
 @ui_bp.route('/announcement/delete/<int:id>', methods=['POST'])
 @login_required
 def delete_announcement(id):
-    # [수정] 삭제는 본사 관리자만 가능
     if current_user.store_id or not current_user.brand_id:
         abort(403, description="공지사항 삭제 권한이 없습니다. (본사 관리자 전용)")
         
@@ -160,19 +162,15 @@ def delete_announcement(id):
         flash(f"공지사항 삭제 중 오류 발생: {e}", "error")
     return redirect(url_for('ui.announcement_list'))
 
-# --- [신규] 댓글 관련 라우트 ---
-
 @ui_bp.route('/announcement/<int:id>/comment', methods=['POST'])
 @login_required
 def add_comment(id):
-    """공지사항에 댓글 등록"""
     content = request.form.get('content', '').strip()
     if not content:
         flash("댓글 내용을 입력해주세요.", "warning")
         return redirect(url_for('ui.announcement_detail', id=id))
         
     try:
-        # 공지사항 존재 확인 (같은 브랜드인지 체크)
         announcement = Announcement.query.filter_by(id=id, brand_id=current_user.current_brand_id).first()
         if not announcement:
             abort(404, description="공지사항을 찾을 수 없습니다.")
@@ -196,17 +194,14 @@ def add_comment(id):
 @ui_bp.route('/comment/delete/<int:comment_id>', methods=['POST'])
 @login_required
 def delete_comment(comment_id):
-    """댓글 삭제 (작성자 본인 또는 본사 관리자)"""
     try:
         comment = db.session.get(Comment, comment_id)
         if not comment:
             abort(404, description="댓글을 찾을 수 없습니다.")
             
-        # 권한 체크: 작성자 본인이거나 본사 관리자
         is_author = (comment.user_id == current_user.id)
         is_hq_admin = (current_user.brand_id is not None) and (current_user.store_id is None)
         
-        # 타 브랜드 접근 차단
         if comment.announcement.brand_id != current_user.current_brand_id:
              abort(403, description="권한이 없습니다.")
 
