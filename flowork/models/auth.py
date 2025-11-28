@@ -14,7 +14,7 @@ class Brand(db.Model):
     users = db.relationship('User', back_populates='brand', lazy='dynamic', foreign_keys='User.brand_id', cascade="all, delete-orphan")
     settings = db.relationship('Setting', back_populates='brand', lazy='dynamic', cascade="all, delete-orphan")
     products = db.relationship('Product', backref='brand', lazy='dynamic')
-    announcements = db.relationship('Announcement', backref='brand', lazy='dynamic')
+    # [수정] announcements 관계 제거
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'

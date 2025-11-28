@@ -6,7 +6,8 @@ from flask import request, flash, redirect, url_for, abort, send_file, jsonify, 
 from flask_login import login_required, current_user
 from sqlalchemy import delete, text
 
-from flowork.models import db, Order, OrderProcessing, Announcement, ScheduleEvent, Staff, Setting, User, Store, Brand, Product, Variant, StoreStock, Sale, SaleItem, StockHistory
+# [수정] Announcement, ScheduleEvent 임포트 제거
+from flowork.models import db, Order, OrderProcessing, Staff, Setting, User, Store, Brand, Product, Variant, StoreStock, Sale, SaleItem, StockHistory
 from flowork.services.db import sync_missing_data_in_db
 from . import api_bp
 from .utils import admin_required
@@ -216,75 +217,6 @@ def reset_orders_db():
     
     return redirect(url_for('ui.setting_page'))
 
-@api_bp.route('/api/maintenance/export_announcements', methods=['GET'])
-@admin_required
-def export_announcements_excel():
-    if current_user.store_id: abort(403)
-    
-    try:
-        items = Announcement.query.filter_by(brand_id=current_user.current_brand_id).order_by(Announcement.created_at.desc()).all()
-        data = [{'title': i.title, 'content': i.content, 'created_at': i.created_at.strftime('%Y-%m-%d %H:%M:%S')} for i in items]
-        
-        df = pd.DataFrame(data)
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False)
-        output.seek(0)
-        
-        return send_file(output, as_attachment=True, download_name=f"notice_backup_{datetime.now().strftime('%Y%m%d')}.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    except Exception as e:
-        flash(f"공지사항 백업 오류: {e}", "error")
-        return redirect(url_for('ui.setting_page'))
-
-@api_bp.route('/api/maintenance/import_announcements', methods=['POST'])
-@admin_required
-def import_announcements_excel():
-    if current_user.store_id: abort(403)
-    
-    file = request.files.get('excel_file')
-    if not file: return redirect(url_for('ui.setting_page'))
-    
-    try:
-        df = pd.read_excel(file).fillna('')
-        count = 0
-        for _, row in df.iterrows():
-            created_at = datetime.now()
-            try:
-                if row.get('created_at'): created_at = datetime.strptime(str(row.get('created_at')), '%Y-%m-%d %H:%M:%S')
-            except: pass
-            
-            item = Announcement(
-                brand_id=current_user.current_brand_id,
-                title=row.get('title'),
-                content=row.get('content'),
-                created_at=created_at
-            )
-            db.session.add(item)
-            count += 1
-        db.session.commit()
-        flash(f"공지사항 {count}건 복구 완료", "success")
-    except Exception as e:
-        db.session.rollback()
-        flash(f"공지사항 복구 오류: {e}", "error")
-        
-    return redirect(url_for('ui.setting_page'))
-
-@api_bp.route('/api/reset-announcements-db', methods=['POST'])
-@admin_required
-def reset_announcements_db():
-    if current_user.store_id: abort(403)
-
-    try:
-        stmt = delete(Announcement).where(Announcement.brand_id == current_user.current_brand_id)
-        db.session.execute(stmt)
-        db.session.commit()
-        flash("공지사항이 초기화되었습니다.", "success")
-    except Exception as e:
-        db.session.rollback()
-        flash(f"공지사항 초기화 오류: {e}", "error")
-    
-    return redirect(url_for('ui.setting_page'))
-
 @api_bp.route('/api/maintenance/export_stores', methods=['GET'])
 @admin_required
 def export_stores_excel():
@@ -379,8 +311,8 @@ def reset_store_db():
         if engine is None:
             raise Exception("Default bind engine not found.")
 
+        # [수정] ScheduleEvent 제거 (해당 테이블을 삭제하지 않음)
         tables_to_drop = [
-            ScheduleEvent.__table__, 
             Staff.__table__,
             Setting.__table__, 
             User.__table__, 
@@ -391,7 +323,7 @@ def reset_store_db():
         db.Model.metadata.drop_all(bind=engine, tables=tables_to_drop, checkfirst=True)
         db.Model.metadata.create_all(bind=engine, tables=tables_to_drop, checkfirst=True)
         
-        flash("✅ '계정/매장/설정/직원/일정' 테이블이 성공적으로 초기화되었습니다. (모든 계정 삭제됨)", "success")
+        flash("✅ '계정/매장/설정/직원' 테이블이 성공적으로 초기화되었습니다. (모든 계정 삭제됨)", "success")
 
     except Exception as e:
         db.session.rollback()
