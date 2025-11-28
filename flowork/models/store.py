@@ -1,6 +1,6 @@
 from ..extensions import db
 from datetime import datetime
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, Index
 
 class Store(db.Model):
     __tablename__ = 'stores'
