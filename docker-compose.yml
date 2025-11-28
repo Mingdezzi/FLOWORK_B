@@ -7,6 +7,8 @@ services:
       - "80:5000"
     env_file:
       - .env
+    environment:
+      - FLASK_APP=run.py
     volumes:
       - ./flowork/static/product_images:/app/flowork/static/product_images
       - flowork_tmp:/tmp
@@ -22,6 +24,8 @@ services:
     command: celery -A flowork.celery_worker.celery worker --loglevel=info --concurrency=4
     env_file:
       - .env
+    environment:
+      - FLASK_APP=run.py
     volumes:
       - ./flowork/static/product_images:/app/flowork/static/product_images
       - flowork_tmp:/tmp

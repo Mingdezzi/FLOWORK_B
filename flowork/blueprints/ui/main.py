@@ -84,3 +84,9 @@ def search_page():
         flash("페이지 로드 중 오류가 발생했습니다.", "error")
         fallback_config = {'columns': 5, 'buttons': [{'label': '전체', 'value': '전체'}]}
         return render_template('search.html', active_page='search', showing_favorites=True, products=[], query='', selected_category='전체', category_config=fallback_config)
+
+@ui_bp.route('/mail')
+@login_required
+def mail_box():
+    """점간 메일함 (준비중)"""
+    return render_template('index.html', active_page='mail', error="메일함 기능은 현재 준비 중입니다.")
