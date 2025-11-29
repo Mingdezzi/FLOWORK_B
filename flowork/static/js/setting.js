@@ -1,6 +1,5 @@
 class SettingApp {
     constructor() {
-        // [중요] 초기화되지 않은 컨테이너 찾기 (탭 격리)
         this.container = document.querySelector('.setting-container:not([data-initialized])');
         if (!this.container) return;
         this.container.dataset.initialized = "true";
@@ -27,8 +26,6 @@ class SettingApp {
 
     cacheDom() {
         const c = this.container;
-        // 모달은 탭 컨텐츠 영역(page-content-layer) 안에 같이 렌더링되므로 
-        // container의 상위(page-content-layer)를 찾아 거기서 모달을 검색합니다.
         const parent = c.closest('.page-content-layer') || document;
 
         return {
@@ -42,11 +39,9 @@ class SettingApp {
             catContainer: c.querySelector('#cat-buttons-container'),
             btnCatAdd: c.querySelector('#btn-add-cat-row'),
             
-            // Bootstrap Modal 인스턴스 (parent 범위 내)
             modalStore: new bootstrap.Modal(parent.querySelector('#edit-store-modal')),
             modalStaff: new bootstrap.Modal(parent.querySelector('#edit-staff-modal')),
 
-            // 모달 내부 요소들 (저장 버튼 등)
             editStoreInputs: {
                 code: parent.querySelector('#edit_store_code'),
                 name: parent.querySelector('#edit_store_name'),
@@ -59,7 +54,6 @@ class SettingApp {
                 contact: parent.querySelector('#edit_staff_contact'),
                 btnSave: parent.querySelector('#btn-save-edit-staff')
             },
-            // 추가 입력 필드 (add)
             newStoreInputs: {
                 code: c.querySelector('#new_store_code'),
                 name: c.querySelector('#new_store_name'),
@@ -84,7 +78,6 @@ class SettingApp {
             this.dom.tableStores.addEventListener('click', (e) => {
                 const btn = e.target.closest('a, button');
                 if(!btn) return;
-                // 클래스명 체크
                 if(btn.classList.contains('btn-delete-store')) { e.preventDefault(); this.deleteStore(btn); }
                 if(btn.classList.contains('btn-edit-store')) { e.preventDefault(); this.openStoreModal(btn); }
                 if(btn.classList.contains('btn-approve-store')) { e.preventDefault(); this.approveStore(btn); }
@@ -106,7 +99,6 @@ class SettingApp {
 
         this.initCategoryForm();
         
-        // 모달 저장 버튼 이벤트 (bind)
         if(this.dom.editStoreInputs.btnSave) {
             this.dom.editStoreInputs.btnSave.addEventListener('click', () => this.saveStoreEdit(this.dom.editStoreInputs.btnSave));
         }

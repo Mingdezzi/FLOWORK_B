@@ -1,87 +1,93 @@
-from ..extensions import db
-from sqlalchemy import Index, UniqueConstraint
-from datetime import datetime
-from flowork.constants import ImageProcessStatus
+from . import db
 
 class Product(db.Model):
     __tablename__ = 'products'
-    __table_args__ = (
-        Index('ix_product_brand_category', 'brand_id', 'item_category'),
-        Index('ix_product_brand_year', 'brand_id', 'release_year'),
-        Index('ix_product_search', 'brand_id', 'product_name_cleaned'),
-        Index('ix_product_favorite', 'brand_id', 'is_favorite'),
-    )
-    id = db.Column(db.Integer, primary_key=True)
-    product_number = db.Column(db.String(100), nullable=False, index=True) 
-    product_name = db.Column(db.String(255), nullable=False)
-    brand_id = db.Column(db.Integer, db.ForeignKey('brands.id'), nullable=False, index=True)
-    is_favorite = db.Column(db.Integer, default=0) 
-    release_year = db.Column(db.Integer, nullable=True, index=True)
-    item_category = db.Column(db.String, nullable=True, index=True)
-    
-    product_number_cleaned = db.Column(db.String, index=True)
-    product_name_cleaned = db.Column(db.String, index=True)
-    product_name_choseong = db.Column(db.String, index=True) 
 
-    image_status = db.Column(db.String(20), default=ImageProcessStatus.READY, nullable=False)
-    image_drive_link = db.Column(db.String(500), nullable=True)
-    thumbnail_url = db.Column(db.String(500), nullable=True)
-    detail_image_url = db.Column(db.String(500), nullable=True)
+    id = db.Column(db.Integer, primary_key=True)
+    brand_id = db.Column(db.Integer, db.ForeignKey('brands.id'), nullable=False)
     
-    last_message = db.Column(db.Text, nullable=True)
+    product_number = db.Column(db.String(50), nullable=False)
+    product_name = db.Column(db.String(200), nullable=False)
     
-    variants = db.relationship('Variant', back_populates='product', cascade="all, delete-orphan")
-    orders = db.relationship('Order', backref='product_ref', lazy='dynamic')
+    # 검색 최적화를 위한 정제된 컬럼
+    product_number_cleaned = db.Column(db.String(50), index=True)
+    product_name_cleaned = db.Column(db.String(200), index=True)
+    
+    release_year = db.Column(db.Integer, nullable=True)
+    item_category = db.Column(db.String(50), nullable=True)
+    sub_category = db.Column(db.String(50), nullable=True)
+    gender = db.Column(db.String(20), nullable=True)
+    
+    is_favorite = db.Column(db.Integer, default=0)
+    
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+
+    # 상품 삭제 시 하위 옵션도 자동 삭제
+    variants = db.relationship('Variant', backref='product', cascade='all, delete-orphan')
+
+    __table_args__ = (
+        db.UniqueConstraint('brand_id', 'product_number', name='_brand_pn_uc'),
+    )
 
 class Variant(db.Model):
     __tablename__ = 'variants'
+
     id = db.Column(db.Integer, primary_key=True)
-    barcode = db.Column(db.String(255), nullable=False, unique=True, index=True) 
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
-    product = db.relationship('Product', back_populates='variants')
     
-    color = db.Column(db.String)
-    size = db.Column(db.String)
+    color = db.Column(db.String(50), nullable=False)
+    size = db.Column(db.String(20), nullable=False)
+    barcode = db.Column(db.String(50), unique=True, nullable=True)
+    
     original_price = db.Column(db.Integer, default=0)
     sale_price = db.Column(db.Integer, default=0)
-    hq_quantity = db.Column(db.Integer, default=0)
+    cost_price = db.Column(db.Integer, default=0)
     
-    barcode_cleaned = db.Column(db.String, index=True, unique=True)
-    color_cleaned = db.Column(db.String, index=True)
-    size_cleaned = db.Column(db.String, index=True)
+    hq_quantity = db.Column(db.Integer, default=0) 
     
-    stock_levels = db.relationship('StoreStock', back_populates='variant', cascade="all, delete-orphan")
-    stock_history = db.relationship('StockHistory', backref='variant', lazy='dynamic')
-    
-    __table_args__ = (Index('ix_variant_product_color_size', 'product_id', 'color', 'size'),)
+    # 옵션 삭제 시 매장 재고 데이터도 삭제
+    store_stocks = db.relationship('StoreStock', backref='variant', cascade='all, delete-orphan')
+
+    __table_args__ = (
+        db.UniqueConstraint('product_id', 'color', 'size', name='_prod_color_size_uc'),
+    )
 
 class StoreStock(db.Model):
-    __tablename__ = 'store_stock'
-    __table_args__ = (
-        Index('ix_store_stock_lookup', 'store_id', 'variant_id'),
-        UniqueConstraint('store_id', 'variant_id', name='uq_store_variant'), 
-    )
+    __tablename__ = 'store_stocks'
+
     id = db.Column(db.Integer, primary_key=True)
-    store_id = db.Column(db.Integer, db.ForeignKey('stores.id'), nullable=False, index=True)
-    variant_id = db.Column(db.Integer, db.ForeignKey('variants.id'), nullable=False, index=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('stores.id'), nullable=False)
+    variant_id = db.Column(db.Integer, db.ForeignKey('variants.id'), nullable=False)
     
-    variant = db.relationship('Variant', back_populates='stock_levels')
     quantity = db.Column(db.Integer, default=0)
+    location = db.Column(db.String(50), nullable=True)
+    
+    # 재고 실사 관련 필드
     actual_stock = db.Column(db.Integer, nullable=True)
+    stock_diff = db.Column(db.Integer, nullable=True)
+    last_check_date = db.Column(db.DateTime, nullable=True)
+
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
+    store = db.relationship('Store', backref='stocks')
+    # variant는 위에서 backref로 정의됨
+
+    __table_args__ = (
+        db.UniqueConstraint('store_id', 'variant_id', name='_store_variant_uc'),
+    )
 
 class StockHistory(db.Model):
     __tablename__ = 'stock_history'
     
     id = db.Column(db.Integer, primary_key=True)
-    store_id = db.Column(db.Integer, db.ForeignKey('stores.id'), nullable=False, index=True)
-    variant_id = db.Column(db.Integer, db.ForeignKey('variants.id'), nullable=False, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True) 
+    store_id = db.Column(db.Integer, db.ForeignKey('stores.id'), nullable=True)
+    variant_id = db.Column(db.Integer, db.ForeignKey('variants.id'), nullable=False)
     
-    change_type = db.Column(db.String(50), nullable=False) 
-    quantity_change = db.Column(db.Integer, nullable=False) 
-    current_quantity = db.Column(db.Integer, nullable=False) 
+    change_type = db.Column(db.String(20), nullable=False) # SALE, REFUND, IN, OUT, CHECK
+    quantity_change = db.Column(db.Integer, nullable=False)
+    final_quantity = db.Column(db.Integer, nullable=False)
     
-    created_at = db.Column(db.DateTime(timezone=True), default=datetime.now)
-    
-    store = db.relationship('Store', backref=db.backref('history', lazy='dynamic'))
-    user = db.relationship('User', backref=db.backref('stock_history', lazy='dynamic'))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    description = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, server_default=db.func.now())

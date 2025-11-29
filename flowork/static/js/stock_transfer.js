@@ -1,13 +1,11 @@
 class StockTransferApp {
     constructor() {
-        // 컨테이너 식별 (In 또는 Out)
         this.container = document.querySelector('.transfer-in-container:not([data-initialized]), .transfer-out-container:not([data-initialized])');
         if (!this.container) return;
         this.container.dataset.initialized = "true";
 
         this.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         
-        // 모달 찾기 (컨테이너 형제)
         const pageLayer = this.container.closest('.unique-content-area') || document;
         this.modalEl = pageLayer.querySelector('#requestModal');
         this.modal = this.modalEl ? new bootstrap.Modal(this.modalEl) : null;
@@ -31,7 +29,6 @@ class StockTransferApp {
     }
 
     init() {
-        // 리스트 액션 (출고확정/거부/입고확정) - 컨테이너 내 이벤트 위임
         this.container.addEventListener('click', async (e) => {
             if (e.target.classList.contains('btn-ship')) {
                 if (!confirm('출고 확정하시겠습니까? (재고 차감)')) return;
@@ -47,9 +44,10 @@ class StockTransferApp {
             }
         });
 
-        // 요청 모달 로직 (입고 페이지용)
         if (this.dom.openBtn) {
-            this.dom.openBtn.addEventListener('click', () => this.modal.show());
+            this.dom.openBtn.addEventListener('click', () => {
+                if(this.modal) this.modal.show();
+            });
         }
 
         if (this.dom.searchBtn) {

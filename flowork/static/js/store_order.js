@@ -6,8 +6,6 @@ class StoreOrderApp {
 
         this.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         
-        // 모달은 컨테이너 형제 요소 (block content 내)
-        // 탭 로직 상 page-content-layer > .unique-content-area > [container, modal] 구조임.
         const pageLayer = this.container.closest('.unique-content-area') || document;
         this.modalEl = pageLayer.querySelector('#orderModal');
         this.modal = this.modalEl ? new bootstrap.Modal(this.modalEl) : null;
@@ -20,7 +18,8 @@ class StoreOrderApp {
             searchResults: pageLayer.querySelector('#search-results'),
             colorSelect: pageLayer.querySelector('#req-color'),
             sizeSelect: pageLayer.querySelector('#req-size'),
-            submitBtn: pageLayer.querySelector('#btn-submit-order')
+            submitBtn: pageLayer.querySelector('#btn-submit-order'),
+            qtyInput: pageLayer.querySelector('#req-qty')
         };
 
         this.selectedVariantId = null;
@@ -41,7 +40,7 @@ class StoreOrderApp {
 
         if (this.dom.searchBtn) {
             this.dom.searchBtn.addEventListener('click', (e) => {
-                e.preventDefault(); // form submit 방지
+                e.preventDefault();
                 this.searchProduct();
             });
             this.dom.reqPnInput.addEventListener('keydown', (e) => {
@@ -66,7 +65,6 @@ class StoreOrderApp {
             });
         }
         
-        // 목록에서 승인/거절 버튼 위임
         this.container.addEventListener('click', (e) => {
             if (e.target.classList.contains('btn-approve')) {
                 const id = e.target.dataset.id;
@@ -86,7 +84,7 @@ class StoreOrderApp {
         const query = this.dom.reqPnInput.value.trim();
         if (!query) return Flowork.toast('품번을 입력하세요', 'warning');
         
-        const url = document.body.dataset.productSearchUrl; // body dataset 사용 (공통)
+        const url = document.body.dataset.productSearchUrl;
         try {
             const res = await fetch(url, {
                 method: 'POST',
@@ -153,10 +151,8 @@ class StoreOrderApp {
 
     async submitOrder() {
         if (!this.selectedVariantId) { Flowork.toast('상품을 선택하세요.', 'warning'); return; }
-        // 모달 내부 qty input 찾기
-        const qtyInput = this.modalEl.querySelector('#req-qty');
-        const qty = qtyInput.value;
-        const url = document.body.dataset.apiCreate; // body dataset 사용
+        const qty = this.dom.qtyInput.value;
+        const url = document.body.dataset.apiCreate;
 
         try {
             const res = await fetch(url, {

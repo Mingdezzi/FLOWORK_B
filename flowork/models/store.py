@@ -1,46 +1,52 @@
-from ..extensions import db
-from datetime import datetime
-from sqlalchemy import UniqueConstraint, Index
+from . import db
+
+class Brand(db.Model):
+    __tablename__ = 'brands'
+    id = db.Column(db.Integer, primary_key=True)
+    brand_name = db.Column(db.String(50), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'brand_name': self.brand_name
+        }
 
 class Store(db.Model):
     __tablename__ = 'stores'
+    
     id = db.Column(db.Integer, primary_key=True)
+    brand_id = db.Column(db.Integer, db.ForeignKey('brands.id'), nullable=False)
+    
     store_name = db.Column(db.String(100), nullable=False)
-    phone_number = db.Column(db.String(50), nullable=True)
+    store_code = db.Column(db.String(50), nullable=True)
+    phone_number = db.Column(db.String(20), nullable=True)
+    manager_name = db.Column(db.String(50), nullable=True)
     
-    brand_id = db.Column(db.Integer, db.ForeignKey('brands.id'), nullable=False, index=True)
-    brand = db.relationship('Brand', back_populates='stores')
+    # 가입 승인 및 활성화 상태
+    is_registered = db.Column(db.Boolean, default=False)
+    is_approved = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
     
-    users = db.relationship('User', back_populates='store', lazy='dynamic', foreign_keys='User.store_id')
-    store_code = db.Column(db.String(100), nullable=True, index=True) 
-    manager_name = db.Column(db.String(100), nullable=True) 
-    is_registered = db.Column(db.Boolean, default=False, nullable=False, index=True)
-    is_approved = db.Column(db.Boolean, default=False, nullable=False, index=True)  
-    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)     
-    
-    orders = db.relationship('Order', backref='store', lazy='dynamic')
-    stock_levels = db.relationship('StoreStock', backref='store', lazy='dynamic', foreign_keys='StoreStock.store_id')
-    staff_members = db.relationship('Staff', backref='store', lazy='dynamic', cascade="all, delete-orphan")
-    received_processings = db.relationship('OrderProcessing', backref='source_store', lazy='dynamic', foreign_keys='OrderProcessing.source_store_id')
-    sales = db.relationship('Sale', back_populates='store', lazy='dynamic')
-    
-    __table_args__ = (UniqueConstraint('brand_id', 'store_code', name='uq_brand_id_store_code'),)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
 
-class Staff(db.Model):
-    __tablename__ = 'staff'
-    id = db.Column(db.Integer, primary_key=True)
-    store_id = db.Column(db.Integer, db.ForeignKey('stores.id'), nullable=False, index=True)
-    name = db.Column(db.String(100), nullable=False) 
-    position = db.Column(db.String(100), nullable=True) 
-    contact = db.Column(db.String(50), nullable=True) 
-    is_active = db.Column(db.Boolean, default=True) 
-    created_at = db.Column(db.DateTime(timezone=True), default=datetime.now)
+    brand = db.relationship('Brand', backref='stores')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'brand_id': self.brand_id,
+            'store_name': self.store_name,
+            'store_code': self.store_code,
+            'is_active': self.is_active
+        }
 
 class Setting(db.Model):
     __tablename__ = 'settings'
     id = db.Column(db.Integer, primary_key=True)
-    brand_id = db.Column(db.Integer, db.ForeignKey('brands.id'), nullable=False, index=True)
-    brand = db.relationship('Brand', back_populates='settings')
-    key = db.Column(db.String(100), nullable=False, index=True)
+    brand_id = db.Column(db.Integer, db.ForeignKey('brands.id'), nullable=False)
+    key = db.Column(db.String(50), nullable=False)
     value = db.Column(db.Text, nullable=True)
-    __table_args__ = (UniqueConstraint('brand_id', 'key', name='uq_brand_id_key'),)
+    updated_at = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now())
+
+    __table_args__ = (db.UniqueConstraint('brand_id', 'key', name='_brand_key_uc'),)

@@ -1,51 +1,55 @@
-from ..extensions import db
 from flask_login import UserMixin
-import bcrypt
-from datetime import datetime
-from sqlalchemy import CheckConstraint, UniqueConstraint
+from werkzeug.security import generate_password_hash, check_password_hash
+from . import db
 
-class Brand(db.Model):
-    __tablename__ = 'brands'
-    id = db.Column(db.Integer, primary_key=True)
-    brand_name = db.Column(db.String(100), nullable=False, unique=True)
-    created_at = db.Column(db.DateTime(timezone=True), default=datetime.now)
-    
-    stores = db.relationship('Store', back_populates='brand', lazy='dynamic', cascade="all, delete-orphan")
-    users = db.relationship('User', back_populates='brand', lazy='dynamic', foreign_keys='User.brand_id', cascade="all, delete-orphan")
-    settings = db.relationship('Setting', back_populates='brand', lazy='dynamic', cascade="all, delete-orphan")
-    products = db.relationship('Product', backref='brand', lazy='dynamic')
-    # [수정] announcements 관계 제거
-
-class User(db.Model, UserMixin):
+class User(UserMixin, db.Model):
     __tablename__ = 'users'
+
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), nullable=False, index=True) 
-    password_hash = db.Column(db.String(255), nullable=False) 
-    is_admin = db.Column(db.Boolean, default=False)
-    is_super_admin = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='staff')
     
-    brand_id = db.Column(db.Integer, db.ForeignKey('brands.id'), nullable=True, index=True)
-    brand = db.relationship('Brand', back_populates='users', foreign_keys=[brand_id])
+    # 소속 정보
+    brand_id = db.Column(db.Integer, db.ForeignKey('brands.id'), nullable=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('stores.id'), nullable=True)
     
-    store_id = db.Column(db.Integer, db.ForeignKey('stores.id'), nullable=True, index=True)
-    store = db.relationship('Store', back_populates='users', foreign_keys=[store_id])
-    
-    __table_args__ = (
-        UniqueConstraint('username', 'brand_id', name='uq_username_brand_id'),
-        CheckConstraint(
-            '(is_super_admin = TRUE AND brand_id IS NULL AND store_id IS NULL) OR '
-            '(is_super_admin = FALSE AND brand_id IS NOT NULL AND store_id IS NULL) OR '
-            '(is_super_admin = FALSE AND brand_id IS NOT NULL AND store_id IS NOT NULL)',
-            name='user_role_check'
-        ),
-    )
-    
+    # 상태 정보
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    is_active = db.Column(db.Boolean, default=False) 
+
+    # 관계 설정
+    brand = db.relationship('Brand', backref='users')
+    store = db.relationship('Store', backref='users')
+
     def set_password(self, password):
-        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
+        self.password_hash = generate_password_hash(password)
+
     def check_password(self, password):
-        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
-    
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def is_super_admin(self):
+        return self.role == 'super_admin'
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin' or self.role == 'super_admin'
+
     @property
     def current_brand_id(self):
-        return self.brand_id
+        if self.brand_id:
+            return self.brand_id
+        if self.store and self.store.brand_id:
+            return self.store.brand_id
+        return None
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'role': self.role,
+            'brand_id': self.brand_id,
+            'store_id': self.store_id,
+            'is_active': self.is_active
+        }

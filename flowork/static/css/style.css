@@ -33,7 +33,6 @@ body {
     }
 }
 
-/* 너비 통일 적용 */
 #page-container-wrapper {
     flex-grow: 1;
     overflow-y: auto;
@@ -58,7 +57,6 @@ body {
     }
 }
 
-/* 공통 UI */
 .card {
     border: none;
     box-shadow: 0 2px 6px rgba(0,0,0,0.04);
@@ -93,7 +91,6 @@ body {
     border-color: #eb6864;
 }
 
-/* Chrome Tabs */
 .chrome-tabs-shell {
     background: #e3e5e8;
     padding: 8px 8px 0 8px;
@@ -205,7 +202,6 @@ body {
     transition: width 0.2s;
 }
 
-/* Sidebar */
 .sidebar-desktop .list-group-item {
     border: none;
     padding: 0.6rem 1rem;
@@ -241,7 +237,6 @@ body {
     }
 }
 
-/* 키패드 스타일 */
 .keypad-hidden { display: none !important; }
 
 .keypad-grid {
@@ -339,7 +334,6 @@ body {
     color: white;
 }
 
-/* 재고 테이블 & Edit 모드 */
 .stock-table th, .stock-table td {
     text-align: center;
     vertical-align: middle;
@@ -355,7 +349,6 @@ body.edit-mode .stock-control .button-stack { display: none; }
 body.edit-mode .btn-toggle-actual-stock { display: none; }
 body.edit-mode #add-variant-row { display: table-row; }
 
-/* Sales Page Layout Fix for Desktop */
 @media (min-width: 992px) {
     .sales-container .row {
         height: 100%;
