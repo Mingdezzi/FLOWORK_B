@@ -1,85 +1,14 @@
 {% extends 'base.html' %}
 
-{% block body_attrs %}
-data-update-stock-url="{{ url_for('api.update_stock') }}"
-data-toggle-favorite-url="{{ url_for('api.toggle_favorite') }}"
-data-update-actual-stock-url="{{ url_for('api.update_actual_stock') }}"
-data-update-product-details-url="{{ url_for('api.api_update_product_details') }}"
-data-product-id="{{ product.id }}"
-data-my-store-id="{{ my_store_id or 0 }}"
-{% endblock %}
-
 {% block content %}
-<style>
-    /* 상품 상세 전용 스타일 */
-    .img-container {
-        width: 100%;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        overflow: hidden;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 300px;
-        border: 1px solid #dee2e6;
-    }
-    .img-container img {
-        max-width: 100%;
-        max-height: 400px;
-        object-fit: contain;
-    }
-    .no-image-placeholder {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        color: #adb5bd;
-    }
-    .stock-stepper {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        overflow: hidden;
-        width: 120px;
-        margin: 0 auto;
-    }
-    .stock-stepper button {
-        border: none;
-        background: #fff;
-        width: 36px;
-        height: 36px;
-        font-size: 1.2rem;
-        color: #495057;
-        transition: background 0.2s;
-    }
-    .stock-stepper button:hover:not(:disabled) {
-        background-color: #f1f3f5;
-        color: #eb6864;
-    }
-    .stock-stepper button:disabled {
-        color: #dee2e6;
-        cursor: not-allowed;
-    }
-    .stock-stepper .stock-val {
-        flex: 1;
-        text-align: center;
-        font-weight: bold;
-        font-size: 1.1rem;
-        border-left: 1px solid #f1f3f5;
-        border-right: 1px solid #f1f3f5;
-        line-height: 36px;
-    }
-    .hq-stock-badge {
-        font-size: 0.9rem;
-        padding: 4px 8px;
-        border-radius: 4px;
-        background-color: #e9ecef;
-        color: #495057;
-    }
-</style>
-
-<div class="container my-4">
+<div class="product-detail-container container my-4"
+     data-update-stock-url="{{ url_for('api.update_stock') }}"
+     data-toggle-favorite-url="{{ url_for('api.toggle_favorite') }}"
+     data-update-actual-stock-url="{{ url_for('api.update_actual_stock') }}"
+     data-update-product-details-url="{{ url_for('api.api_update_product_details') }}"
+     data-product-id="{{ product.id }}"
+     data-my-store-id="{{ my_store_id or 0 }}">
+     
     <div class="row g-4">
         <div class="col-lg-5">
             <div class="card shadow-sm border-0 mb-3">
@@ -220,7 +149,6 @@ data-my-store-id="{{ my_store_id or 0 }}"
             <span class="view-field">__SIZE__</span>
             <input type="text" class="form-control form-control-sm edit-field" data-field="size" value="__SIZE__" style="display:none;">
         </td>
-        
         <td>
             <div class="__SHOW_IF_MY_STORE__">
                 <div class="stock-stepper">
@@ -233,11 +161,7 @@ data-my-store-id="{{ my_store_id or 0 }}"
                 <span class="fw-bold fs-5 __STORE_QTY_CLASS__">__STORE_QTY__</span>
             </div>
         </td>
-        
-        <td>
-            <span class="hq-stock-badge">__HQ_QTY__</span>
-        </td>
-
+        <td><span class="hq-stock-badge">__HQ_QTY__</span></td>
         <td class="view-field actual-stock-cell" style="display:none;">
             <div class="input-group input-group-sm __SHOW_IF_MY_STORE__">
                 <input type="tel" id="actual-__BARCODE__" class="form-control text-center actual-stock-input" value="__ACTUAL_QTY_VAL__" data-barcode="__BARCODE__" disabled>
@@ -245,7 +169,6 @@ data-my-store-id="{{ my_store_id or 0 }}"
             </div>
             <span class="badge __DIFF_CLASS__" id="diff-__BARCODE__">__DIFF_VAL__</span>
         </td>
-        
         <td class="edit-field" style="display:none;">
             <button class="btn btn-outline-danger btn-sm btn-delete-variant"><i class="bi bi-trash"></i></button>
         </td>

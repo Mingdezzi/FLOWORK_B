@@ -1,27 +1,33 @@
 class DetailApp {
     constructor() {
-        const bodyData = document.body.dataset;
+        // [중요] 스코프 격리
+        this.container = document.querySelector('.product-detail-container:not([data-initialized])');
+        if (!this.container) return;
+        this.container.dataset.initialized = "true";
+
+        const ds = this.container.dataset;
         this.config = {
-            updateStockUrl: bodyData.updateStockUrl,
-            toggleFavoriteUrl: bodyData.toggleFavoriteUrl,
-            updateActualStockUrl: bodyData.updateActualStockUrl,
-            updateProductDetailsUrl: bodyData.updateProductDetailsUrl,
-            currentProductID: bodyData.productId,
-            myStoreID: parseInt(bodyData.myStoreId, 10) || 0
+            updateStockUrl: ds.updateStockUrl,
+            toggleFavoriteUrl: ds.toggleFavoriteUrl,
+            updateActualStockUrl: ds.updateActualStockUrl,
+            updateProductDetailsUrl: ds.updateProductDetailsUrl,
+            currentProductID: ds.productId,
+            myStoreID: parseInt(ds.myStoreId, 10) || 0
         };
 
         this.dom = {
-            storeSelector: document.getElementById('hq-store-selector'),
-            variantsTbody: document.getElementById('variants-tbody'),
-            rowTemplate: document.getElementById('variant-row-template'),
+            storeSelector: this.container.querySelector('#hq-store-selector'),
+            variantsTbody: this.container.querySelector('#variants-tbody'),
+            // 템플릿은 ID로 찾되, 내용은 복사해서 쓰므로 문제 없음
+            rowTemplate: document.getElementById('variant-row-template'), 
             addRowTemplate: document.getElementById('add-variant-row-template'),
-            toggleActualStockBtn: document.getElementById('toggle-actual-stock-btn'),
-            favButton: document.getElementById('fav-btn'),
-            editProductBtn: document.getElementById('edit-product-btn'),
-            saveProductBtn: document.getElementById('save-product-btn'),
-            cancelEditBtn: document.getElementById('cancel-edit-btn'),
-            deleteProductBtn: document.getElementById('delete-product-btn'),
-            deleteProductForm: document.getElementById('delete-product-form')
+            toggleActualStockBtn: this.container.querySelector('#toggle-actual-stock-btn'),
+            favButton: this.container.querySelector('#fav-btn'),
+            editProductBtn: this.container.querySelector('#edit-product-btn'),
+            saveProductBtn: this.container.querySelector('#save-product-btn'),
+            cancelEditBtn: this.container.querySelector('#cancel-edit-btn'),
+            deleteProductBtn: this.container.querySelector('#delete-product-btn'),
+            deleteProductForm: this.container.querySelector('#delete-product-form')
         };
 
         this.state = {
@@ -30,7 +36,9 @@ class DetailApp {
 
         this.init();
     }
-
+    
+    // ... (init 메소드 및 나머지 로직은 이전 Part 6의 코드와 동일, this.container 스코프 내에서 작동) ...
+    
     init() {
         if (this.dom.storeSelector) {
             this.dom.storeSelector.addEventListener('change', () => {
@@ -73,6 +81,14 @@ class DetailApp {
             this.dom.editProductBtn.addEventListener('click', () => {
                 if (confirm('상품 정보 수정 모드로 전환합니다.')) {
                     document.body.classList.add('edit-mode');
+                    // 보기 모드 요소 숨김, 편집 모드 요소 표시 (CSS 처리 권장하나 JS로 보완)
+                    this.container.querySelectorAll('.view-field').forEach(el => el.style.display = 'none');
+                    this.container.querySelectorAll('.edit-field').forEach(el => el.style.display = 'block');
+                    if(this.dom.addRowTemplate) {
+                         const addRow = this.container.querySelector('#add-variant-row');
+                         if(addRow) addRow.style.display = 'table-row';
+                    }
+                    
                     const currentStoreId = this.dom.storeSelector ? (parseInt(this.dom.storeSelector.value, 10) || 0) : this.config.myStoreID;
                     this.renderStockTable(currentStoreId);
                 }
@@ -83,6 +99,11 @@ class DetailApp {
             this.dom.cancelEditBtn.addEventListener('click', () => {
                 if (confirm('수정을 취소하시겠습니까?')) {
                     document.body.classList.remove('edit-mode');
+                    this.container.querySelectorAll('.view-field').forEach(el => el.style.display = '');
+                    this.container.querySelectorAll('.edit-field').forEach(el => el.style.display = 'none');
+                    const addRow = this.container.querySelector('#add-variant-row');
+                    if(addRow) addRow.style.display = 'none';
+
                     const currentStoreId = this.dom.storeSelector ? (parseInt(this.dom.storeSelector.value, 10) || 0) : this.config.myStoreID;
                     this.renderStockTable(currentStoreId);
                 }
@@ -162,6 +183,9 @@ class DetailApp {
 
         if (document.body.classList.contains('edit-mode') && this.dom.addRowTemplate) {
             this.dom.variantsTbody.insertAdjacentHTML('beforeend', this.dom.addRowTemplate.innerHTML);
+            // 새로 추가된 행 보이게 하기
+            const addRow = this.dom.variantsTbody.lastElementChild;
+            if(addRow) addRow.style.display = 'table-row';
         }
         
         this.updateActualStockInputsState();
@@ -187,7 +211,8 @@ class DetailApp {
         const saveButton = e.target.closest('button.btn-save-actual');
         if (saveButton && !saveButton.disabled) {
             const barcode = saveButton.dataset.barcode;
-            const inputElement = document.getElementById(`actual-${barcode}`);
+            // [중요] ID 대신 컨테이너 내 검색 사용 (ID 중복 회피)
+            const inputElement = this.container.querySelector(`#actual-${barcode}`);
             this.saveActualStockHandler(saveButton, inputElement, barcode);
         }
         
@@ -212,7 +237,7 @@ class DetailApp {
     handleTableInput(e) {
         if (e.target.classList.contains('actual-stock-input')) {
             const barcode = e.target.dataset.barcode;
-            const saveBtn = document.querySelector(`.btn-save-actual[data-barcode="${barcode}"]`);
+            const saveBtn = this.container.querySelector(`.btn-save-actual[data-barcode="${barcode}"]`);
             if(saveBtn && this.state.isActualStockEnabled) {
                 saveBtn.disabled = false;
             }
@@ -228,7 +253,7 @@ class DetailApp {
 
         if (e.key === 'Enter') {
             e.preventDefault();
-            const saveBtn = document.querySelector(`.btn-save-actual[data-barcode="${currentBarcode}"]`);
+            const saveBtn = this.container.querySelector(`.btn-save-actual[data-barcode="${currentBarcode}"]`);
             if (saveBtn && !saveBtn.disabled) {
                 saveBtn.click(); 
             } else {
@@ -248,8 +273,6 @@ class DetailApp {
 
     handleFavorite(e) {
         const button = e.target.closest('button');
-        const isFavorite = button.classList.contains('text-warning');
-        
         button.disabled = true;
         this.toggleFavoriteOnServer(this.config.currentProductID, button);
     }
@@ -284,7 +307,7 @@ class DetailApp {
     }
 
     handleAddVariantRow() {
-         const addVariantRow = document.getElementById('add-variant-row'); 
+         const addVariantRow = this.container.querySelector('#add-variant-row'); 
          const newColorInput = addVariantRow.querySelector('[data-field="new-color"]');
          const newSizeInput = addVariantRow.querySelector('[data-field="new-size"]');
          const color = newColorInput.value.trim();
@@ -309,9 +332,9 @@ class DetailApp {
 
         const productData = {
             product_id: this.config.currentProductID,
-            product_name: document.getElementById('edit-product-name').value,
-            release_year: document.getElementById('edit-release-year').value || null,
-            item_category: document.getElementById('edit-item-category').value || null,
+            product_name: this.container.querySelector('#edit-product-name').value,
+            release_year: this.container.querySelector('#edit-release-year').value || null,
+            item_category: this.container.querySelector('#edit-item-category').value || null,
             variants: []
         };
         
@@ -339,7 +362,7 @@ class DetailApp {
         try {
             await Flowork.post(this.config.updateProductDetailsUrl, productData);
             Flowork.toast('저장되었습니다.', 'success');
-            window.location.reload();
+            setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
             Flowork.toast(`오류: ${error.message}`, 'danger');
             this.dom.saveProductBtn.disabled = false;
@@ -360,10 +383,12 @@ class DetailApp {
     async updateStockOnServer(barcode, change, buttons) {
         try {
             const data = await Flowork.post(this.config.updateStockUrl, { barcode: barcode, change: change });
-            const quantityDiv = document.getElementById(`stock-${data.barcode}`);
-            quantityDiv.textContent = data.new_quantity;
-            quantityDiv.classList.toggle('text-danger', data.new_quantity === 0);
-            quantityDiv.classList.toggle('text-primary', data.new_quantity > 0);
+            const quantityDiv = this.container.querySelector(`#stock-${data.barcode}`);
+            if (quantityDiv) {
+                quantityDiv.textContent = data.new_quantity;
+                quantityDiv.classList.toggle('text-danger', data.new_quantity === 0);
+                quantityDiv.classList.toggle('text-primary', data.new_quantity > 0);
+            }
         } catch(error) { Flowork.toast(error.message, 'danger'); } 
         finally { buttons.forEach(btn => btn.disabled = false); }
     }
@@ -404,7 +429,7 @@ class DetailApp {
     }
 
     updateStockDiffDisplayDirectly(barcode, stockDiffValue) {
-        const diffSpan = document.getElementById(`diff-${barcode}`);
+        const diffSpan = this.container.querySelector(`#diff-${barcode}`);
         if (diffSpan) {
             diffSpan.textContent = stockDiffValue !== '' && stockDiffValue !== null ? (stockDiffValue > 0 ? `+${stockDiffValue}` : stockDiffValue) : '-';
             diffSpan.className = 'badge ';
@@ -421,5 +446,5 @@ class DetailApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('variants-tbody')) new DetailApp();
+    if (document.querySelector('.product-detail-container')) new DetailApp();
 });

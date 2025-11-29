@@ -1,16 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
-    
-    if (window.HAS_ORDER_LIST_LISTENERS) return;
-    window.HAS_ORDER_LIST_LISTENERS = true;
+    const container = document.querySelector('.order-list-container:not([data-initialized])');
+    if (!container) return;
+    container.dataset.initialized = "true";
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     
-    document.body.addEventListener('click', async (e) => {
-        const updateStatusUrl = document.body.dataset.updateStatusUrl;
-        
+    container.addEventListener('click', async (e) => {
         const targetButton = e.target.closest('.status-btn');
         if (!targetButton) return;
-
+        
+        const updateStatusUrl = container.dataset.updateStatusUrl; // 컨테이너 dataset 사용
         const orderId = targetButton.dataset.orderId;
         const newStatus = targetButton.dataset.newStatus;
         

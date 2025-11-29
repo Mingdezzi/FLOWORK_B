@@ -1,12 +1,10 @@
 {% extends 'base.html' %}
 
-{% block body_attrs %}
-data-api-fetch-variant-url="{{ url_for('api.api_fetch_variant') }}"
-data-bulk-update-actual-stock-url="{{ url_for('api.bulk_update_actual_stock') }}"
-{% endblock %}
-
 {% block content %}
-<div class="container my-4">
+<div class="check-container container my-4"
+     data-api-fetch-variant-url="{{ url_for('api.api_fetch_variant') }}"
+     data-bulk-update-actual-stock-url="{{ url_for('api.bulk_update_actual_stock') }}">
+
     <h4 class="fw-bold mb-3"><i class="bi bi-upc-scan me-2"></i>재고 실사</h4>
 
     {% if not current_user.store_id %}
@@ -77,11 +75,11 @@ data-bulk-update-actual-stock-url="{{ url_for('api.bulk_update_actual_stock') }}
     </div>
 </div>
 
-<audio id="sound-success" src="data:audio/wav;base64,UklGRl9vT1dAVEfmtAAAAABAAABwAAABAAIABAA....(생략: 짧은 삐 소리 데이터)..." preload="auto"></audio>
+<audio id="sound-success" src="data:audio/wav;base64,UklGRl9vT1dAVEfmtAAAAABAAABwAAABAAIABAA..." preload="auto"></audio>
 <audio id="sound-error" src="data:audio/wav;base64,UklGR..." preload="auto"></audio>
 
 <script>
-    // 간단한 Beep음 생성 (오디오 파일 없어도 작동하도록)
+    // 간단한 Beep음 생성
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     const audioCtx = new AudioContext();
 
@@ -93,7 +91,7 @@ data-bulk-update-actual-stock-url="{{ url_for('api.bulk_update_actual_stock') }}
         gain.connect(audioCtx.destination);
 
         if (type === 'success') {
-            osc.frequency.value = 880; // A5
+            osc.frequency.value = 880; 
             osc.type = 'sine';
             gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
             osc.start();

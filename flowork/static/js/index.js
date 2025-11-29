@@ -1,26 +1,30 @@
 class SearchApp {
     constructor() {
+        this.container = document.querySelector('.search-container:not([data-initialized])');
+        if (!this.container) return;
+        this.container.dataset.initialized = "true";
+
         this.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        this.liveSearchUrl = document.body.dataset.liveSearchUrl;
+        this.liveSearchUrl = this.container.dataset.liveSearchUrl;
         
         this.dom = {
-            searchInput: document.getElementById('search-query-input'),
-            clearTopBtn: document.getElementById('keypad-clear-top'),
-            categoryBar: document.getElementById('category-bar'),
-            hiddenCategoryInput: document.getElementById('selected-category'),
-            keypadContainer: document.getElementById('keypad-container'),
-            keypadNum: document.getElementById('keypad-num'),
-            keypadKor: document.getElementById('keypad-kor'),
-            keypadEng: document.getElementById('keypad-eng'),
-            productListUl: document.getElementById('product-list-ul'),
-            productListHeader: document.getElementById('product-list-header'),
-            paginationUL: document.getElementById('search-pagination'),
-            listContainer: document.getElementById('product-list-view'),
-            detailContainer: document.getElementById('product-detail-view'),
-            detailIframe: document.getElementById('product-detail-iframe'),
-            backButton: document.getElementById('btn-back-to-list'),
-            searchForm: document.getElementById('search-form'),
-            categoryButtons: document.querySelectorAll('.category-btn')
+            searchInput: this.container.querySelector('#search-query-input'),
+            clearTopBtn: this.container.querySelector('#keypad-clear-top'),
+            categoryBar: this.container.querySelector('#category-bar'),
+            hiddenCategoryInput: this.container.querySelector('#selected-category'),
+            keypadContainer: this.container.querySelector('#keypad-container'),
+            keypadNum: this.container.querySelector('#keypad-num'),
+            keypadKor: this.container.querySelector('#keypad-kor'),
+            keypadEng: this.container.querySelector('#keypad-eng'),
+            productListUl: this.container.querySelector('#product-list-ul'),
+            productListHeader: this.container.querySelector('#product-list-header'),
+            paginationUL: this.container.querySelector('#search-pagination'),
+            listContainer: this.container.querySelector('#product-list-view'),
+            detailContainer: this.container.querySelector('#product-detail-view'),
+            detailIframe: this.container.querySelector('#product-detail-iframe'),
+            backButton: this.container.querySelector('#btn-back-to-list'),
+            searchForm: this.container.querySelector('#search-form'),
+            categoryButtons: this.container.querySelectorAll('.category-btn')
         };
 
         this.state = {
@@ -39,10 +43,12 @@ class SearchApp {
         this.bindEvents();
         this.showKeypad('num');
         
-        const currentCategory = this.dom.hiddenCategoryInput.value || '전체';
-        this.dom.categoryButtons.forEach(btn => {
-            if (btn.dataset.category === currentCategory) btn.classList.add('active');
-        });
+        if (this.dom.hiddenCategoryInput) {
+            const currentCategory = this.dom.hiddenCategoryInput.value || '전체';
+            this.dom.categoryButtons.forEach(btn => {
+                if (btn.dataset.category === currentCategory) btn.classList.add('active');
+            });
+        }
         
         this.performSearch(1);
     }
@@ -112,7 +118,7 @@ class SearchApp {
         }
         if (this.dom.detailIframe) this.dom.detailIframe.src = 'about:blank';
     }
-
+    
     handleKeypadClick(e) {
         const key = e.target.closest('.keypad-btn, .qwerty-key');
         if (!key) return;
@@ -179,25 +185,25 @@ class SearchApp {
 
     toggleShift() {
         this.state.isKorShiftActive = !this.state.isKorShiftActive;
-        const korShiftBtn = document.querySelector('#keypad-kor [data-key="shift-kor"]');
+        const korShiftBtn = this.container.querySelector('#keypad-kor [data-key="shift-kor"]');
         
         if (this.state.isKorShiftActive) {
             korShiftBtn.classList.add('active', 'btn-primary');
             korShiftBtn.classList.remove('btn-outline-secondary');
             for (const [base, shifted] of Object.entries(this.korKeyMap)) {
-                const el = document.querySelector(`#keypad-kor [data-key="${base}"]`);
+                const el = this.container.querySelector(`#keypad-kor [data-key="${base}"]`);
                 if (el) { el.dataset.key = shifted; el.textContent = shifted; }
             }
         } else {
             korShiftBtn.classList.remove('active', 'btn-primary');
             korShiftBtn.classList.add('btn-outline-secondary');
             for (const [shifted, base] of Object.entries(this.korReverseKeyMap)) {
-                const el = document.querySelector(`#keypad-kor [data-key="${shifted}"]`);
+                const el = this.container.querySelector(`#keypad-kor [data-key="${shifted}"]`);
                 if (el) { el.dataset.key = base; el.textContent = base; }
             }
         }
     }
-
+    
     triggerSearch(immediate = false) {
         clearTimeout(this.state.debounceTimer);
         if (immediate) this.performSearch(1);
@@ -302,5 +308,5 @@ class SearchApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('search-query-input')) new SearchApp();
+    if (document.querySelector('.search-container')) new SearchApp();
 });

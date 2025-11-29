@@ -12,10 +12,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block extra_head %}{% endblock %}
 </head>
-<body data-initial-page="{{ active_page }}">
+<body>
 
     <div class="spa-loader" id="spa-loader"><div class="bar"></div></div>
-    
     <div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index: 1090;" id="toast-container"></div>
 
     <aside class="sidebar-desktop d-none d-lg-flex flex-column border-end bg-white h-100 position-fixed top-0 start-0" style="width: 240px; z-index: 1020;">
@@ -24,11 +23,9 @@
                 <img src="{{ url_for('static', filename='logo.png') }}" alt="FLOWORK" style="height: 30px;">
             </a>
         </div>
-        
         <div class="flex-grow-1 overflow-auto custom-scrollbar p-2">
             {% include '_navigation.html' %}
         </div>
-        
         <div class="p-3 border-top bg-light small">
             <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex flex-column text-truncate">
@@ -65,12 +62,15 @@
         </div>
 
         <div class="chrome-tabs-shell">
-            <div class="chrome-tabs" id="dynamic-tabs-container">
-            </div>
+            <div class="chrome-tabs" id="dynamic-tabs-container"></div>
         </div>
 
-        <div id="page-container-wrapper" class="p-3 p-lg-4">
-            {% block content %}{% endblock %}
+        <div id="page-container-wrapper" class="p-3 p-lg-4 position-relative">
+            <div id="initial-page-content" class="page-content-layer" data-url="{{ request.path }}" style="display: block;">
+                <div class="unique-content-area">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
         </div>
     </main>
 
@@ -80,201 +80,251 @@
     <script src="{{ url_for('static', filename='js/common.js') }}"></script>
 
     <script>
-        const TabManager = {
-            tabs: [],
-            activeTabId: null,
-            container: document.getElementById('dynamic-tabs-container'),
-            pageWrapper: document.getElementById('page-container-wrapper'),
-            loader: document.querySelector('.spa-loader .bar'),
+        if (window.TabManagerInitialized) {
+            console.warn("TabManager already initialized. Skipping.");
+        } else {
+            window.TabManagerInitialized = true;
 
-            init() {
-                this.bindEvents();
-                const initialUrl = window.location.pathname + window.location.search;
-                const initialTitle = document.title.replace('FLOWORK - ', '') || '현재 페이지';
-                
-                const initialContent = this.pageWrapper.innerHTML;
-                this.pageWrapper.innerHTML = ''; 
-                
-                this.createTab(initialUrl, initialTitle, initialContent);
-            },
+            const TabManager = {
+                tabs: [],
+                activeTabId: null,
+                container: document.getElementById('dynamic-tabs-container'),
+                pageWrapper: document.getElementById('page-container-wrapper'),
+                loader: document.querySelector('.spa-loader .bar'),
 
-            bindEvents() {
-                document.body.addEventListener('click', (e) => {
-                    const link = e.target.closest('a.spa-link');
-                    if (link && !e.ctrlKey && !e.metaKey && link.getAttribute('target') !== '_blank') {
+                init() {
+                    const initialContentEl = document.getElementById('initial-page-content');
+                    const initialUrl = window.location.pathname + window.location.search;
+                    const initialTitle = document.title.replace('FLOWORK - ', '').trim() || '홈';
+                    
+                    const tabId = this.generateId();
+                    initialContentEl.id = `page-${tabId}`;
+                    
+                    this.addTabUI(tabId, initialTitle, initialUrl);
+                    this.tabs.push({ id: tabId, url: initialUrl, title: initialTitle });
+                    this.activateTab(tabId);
+
+                    this.bindEvents();
+                },
+
+                bindEvents() {
+                    document.body.addEventListener('click', (e) => {
+                        const link = e.target.closest('a.spa-link');
+                        if (!link || e.ctrlKey || e.metaKey || link.target === '_blank') return;
+
                         e.preventDefault();
                         const url = link.getAttribute('href');
-                        const title = link.innerText.trim() || link.getAttribute('data-title') || '페이지';
+                        let title = link.getAttribute('data-title') || link.innerText.trim();
+                        if (!title) title = "페이지";
+
                         this.open(url, title);
+                    });
+
+                    window.addEventListener('popstate', () => {
+                        const path = window.location.pathname + window.location.search;
+                        const existingTab = this.tabs.find(t => t.url === path);
+                        if (existingTab) {
+                            this.activateTab(existingTab.id);
+                        } else {
+                            this.open(path, 'Loading...', false);
+                        }
+                    });
+
+                    this.container.addEventListener('click', (e) => {
+                        const tabEl = e.target.closest('.chrome-tab');
+                        const closeBtn = e.target.closest('.chrome-tab-close');
+
+                        if (!tabEl) return;
+                        const id = tabEl.dataset.id;
+
+                        if (closeBtn) {
+                            e.stopPropagation();
+                            this.closeTab(id);
+                        } else {
+                            this.activateTab(id);
+                        }
+                    });
+                },
+
+                generateId() {
+                    return 'tab_' + Math.random().toString(36).substr(2, 9);
+                },
+
+                open(url, title, pushState = true) {
+                    if (!url || url === '#') return;
+
+                    const existingTab = this.tabs.find(t => t.url === url);
+                    if (existingTab) {
+                        this.activateTab(existingTab.id);
+                        return;
                     }
-                });
 
-                window.addEventListener('popstate', () => {
-                    this.open(window.location.pathname + window.location.search, 'Back', false);
-                });
-
-                this.container.addEventListener('click', (e) => {
-                    const tabEl = e.target.closest('.chrome-tab');
-                    const closeBtn = e.target.closest('.chrome-tab-close');
-                    
-                    if (closeBtn && tabEl) {
-                        e.stopPropagation();
-                        this.closeTab(tabEl.dataset.id);
-                    } else if (tabEl) {
-                        this.activateTab(tabEl.dataset.id);
+                    if (pushState) {
+                        history.pushState(null, '', url);
                     }
-                });
-            },
-
-            generateId() {
-                return 'tab_' + Math.random().toString(36).substr(2, 9);
-            },
-
-            open(url, title, pushState = true) {
-                if (url === '#' || !url) return;
-
-                const existingTab = this.tabs.find(t => t.url === url);
-                if (existingTab) {
-                    this.activateTab(existingTab.id);
-                } else {
                     this.fetchPage(url, title);
-                }
-
-                if (pushState) history.pushState(null, '', url);
-                
-                const offcanvasEl = document.getElementById('mobileMenuSidebar');
-                if (offcanvasEl) {
-                    const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
-                    if (bsOffcanvas) bsOffcanvas.hide();
-                }
-            },
-
-            async fetchPage(url, title) {
-                this.loader.style.width = '30%';
-                try {
-                    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                    if (!res.ok) throw new Error('Load failed');
                     
-                    const html = await res.text();
-                    this.loader.style.width = '80%';
-                    
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    
-                    const mainContent = doc.getElementById('main-content') || doc.querySelector('.container') || doc.body;
-                    const cleanContent = mainContent.innerHTML;
-                    
-                    const pageTitle = doc.title.replace('FLOWORK - ', '') || title;
-                    
-                    this.createTab(url, pageTitle, cleanContent);
-                    
-                    const newScripts = doc.getElementById('page-scripts');
-                    if (newScripts) this.executeScripts(newScripts);
-
-                } catch (e) {
-                    console.error(e);
-                    Flowork.toast('페이지 로드 실패', 'danger');
-                } finally {
-                    this.loader.style.width = '100%';
-                    setTimeout(() => { this.loader.style.width = '0'; }, 200);
-                }
-            },
-
-            createTab(url, title, contentHtml) {
-                const id = this.generateId();
-                const tabData = { id, url, title };
-                this.tabs.push(tabData);
-
-                const tabEl = document.createElement('div');
-                tabEl.className = 'chrome-tab';
-                tabEl.dataset.id = id;
-                tabEl.innerHTML = `
-                    <div class="chrome-tab-content">
-                        <span class="chrome-tab-title text-truncate">${title}</span>
-                        <span class="chrome-tab-close"><i class="bi bi-x"></i></span>
-                    </div>
-                    <div class="chrome-tab-bottom-border"></div>
-                `;
-                this.container.appendChild(tabEl);
-
-                const contentEl = document.createElement('div');
-                contentEl.id = `page-${id}`;
-                contentEl.className = 'page-content-layer';
-                contentEl.style.display = 'none';
-                contentEl.innerHTML = contentHtml;
-                this.pageWrapper.appendChild(contentEl);
-
-                this.activateTab(id);
-            },
-
-            activateTab(id) {
-                this.activeTabId = id;
-                
-                this.container.querySelectorAll('.chrome-tab').forEach(el => {
-                    el.classList.toggle('active', el.dataset.id === id);
-                });
-
-                this.pageWrapper.querySelectorAll('.page-content-layer').forEach(el => {
-                    el.style.display = el.id === `page-${id}` ? 'block' : 'none';
-                });
-
-                const tab = this.tabs.find(t => t.id === id);
-                if (tab) {
-                    document.title = `FLOWORK - ${tab.title}`;
-                    this.updateNavHighlight(tab.url);
-                    window.history.replaceState(null, '', tab.url);
-                }
-            },
-
-            closeTab(id) {
-                const idx = this.tabs.findIndex(t => t.id === id);
-                if (idx === -1) return;
-
-                const tabEl = this.container.querySelector(`.chrome-tab[data-id="${id}"]`);
-                if (tabEl) tabEl.remove();
-
-                const contentEl = document.getElementById(`page-${id}`);
-                if (contentEl) contentEl.remove();
-
-                this.tabs.splice(idx, 1);
-
-                if (this.activeTabId === id) {
-                    if (this.tabs.length > 0) {
-                        const nextTab = this.tabs[Math.min(idx, this.tabs.length - 1)];
-                        this.activateTab(nextTab.id);
-                    } else {
-                        this.open('/', '홈');
+                    const offcanvasEl = document.getElementById('mobileMenuSidebar');
+                    if (offcanvasEl) {
+                        const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                        if (bsOffcanvas) bsOffcanvas.hide();
                     }
-                }
-            },
+                },
 
-            updateNavHighlight(url) {
-                document.querySelectorAll('.list-group-item, .nav-link').forEach(link => {
-                    const href = link.getAttribute('href');
-                    if (href === url) link.classList.add('active');
-                    else link.classList.remove('active');
-                });
-            },
-
-            executeScripts(container) {
-                const scripts = container.querySelectorAll('script');
-                scripts.forEach(oldScript => {
-                    const newScript = document.createElement('script');
-                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-                    document.body.appendChild(newScript);
+                async fetchPage(url, title) {
+                    this.loader.style.width = '30%';
                     
-                    const removeScript = () => { if(newScript.parentNode) newScript.parentNode.removeChild(newScript); };
-                    setTimeout(removeScript, 1000); 
-                });
-                
-                document.dispatchEvent(new Event('DOMContentLoaded'));
-            }
-        };
+                    try {
+                        const res = await fetch(url, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        
+                        if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
 
-        document.addEventListener('DOMContentLoaded', () => {
-            TabManager.init();
-        });
+                        const html = await res.text();
+                        this.loader.style.width = '70%';
+
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+
+                        let contentHtml = '';
+                        const uniqueContent = doc.querySelector('.unique-content-area');
+                        
+                        if (uniqueContent) {
+                            contentHtml = uniqueContent.innerHTML;
+                        } else {
+                            const container = doc.querySelector('.container') || doc.querySelector('.container-fluid');
+                            if (container) contentHtml = container.outerHTML;
+                            else contentHtml = doc.body.innerHTML;
+                        }
+
+                        const pageTitle = doc.title.replace('FLOWORK - ', '').trim() || title;
+
+                        this.createNewTab(url, pageTitle, contentHtml);
+
+                        const scriptContainer = doc.getElementById('page-scripts');
+                        if (scriptContainer) {
+                            this.executeScripts(scriptContainer);
+                        }
+
+                    } catch (error) {
+                        console.error("Page Load Error:", error);
+                        if(window.Flowork) Flowork.toast('페이지 로드 실패', 'danger');
+                        else alert('페이지 로드 실패');
+                    } finally {
+                        this.loader.style.width = '100%';
+                        setTimeout(() => { this.loader.style.width = '0'; }, 200);
+                    }
+                },
+
+                createNewTab(url, title, contentHtml) {
+                    const id = this.generateId();
+                    this.tabs.push({ id, url, title });
+                    this.addTabUI(id, title, url);
+
+                    const contentEl = document.createElement('div');
+                    contentEl.id = `page-${id}`;
+                    contentEl.className = 'page-content-layer';
+                    contentEl.style.display = 'none';
+                    contentEl.innerHTML = `<div class="unique-content-area">${contentHtml}</div>`;
+                    this.pageWrapper.appendChild(contentEl);
+
+                    this.activateTab(id);
+                },
+
+                addTabUI(id, title, url) {
+                    const tabEl = document.createElement('div');
+                    tabEl.className = 'chrome-tab';
+                    tabEl.dataset.id = id;
+                    tabEl.dataset.url = url;
+                    tabEl.innerHTML = `
+                        <div class="chrome-tab-content">
+                            <span class="chrome-tab-title text-truncate">${title}</span>
+                            <span class="chrome-tab-close"><i class="bi bi-x"></i></span>
+                        </div>
+                        <div class="chrome-tab-bottom-border"></div>
+                    `;
+                    this.container.appendChild(tabEl);
+                },
+
+                activateTab(id) {
+                    this.activeTabId = id;
+
+                    this.container.querySelectorAll('.chrome-tab').forEach(el => {
+                        el.classList.toggle('active', el.dataset.id === id);
+                    });
+
+                    this.pageWrapper.querySelectorAll('.page-content-layer').forEach(el => {
+                        el.style.display = el.id === `page-${id}` ? 'block' : 'none';
+                    });
+
+                    const tab = this.tabs.find(t => t.id === id);
+                    if (tab) {
+                        document.title = `FLOWORK - ${tab.title}`;
+                        this.updateNavHighlight(tab.url);
+                        history.replaceState(null, '', tab.url);
+                    }
+                },
+
+                closeTab(id) {
+                    const idx = this.tabs.findIndex(t => t.id === id);
+                    if (idx === -1) return;
+
+                    const tabEl = this.container.querySelector(`.chrome-tab[data-id="${id}"]`);
+                    if (tabEl) tabEl.remove();
+
+                    const contentEl = document.getElementById(`page-${id}`);
+                    if (contentEl) contentEl.remove();
+
+                    this.tabs.splice(idx, 1);
+
+                    if (this.activeTabId === id) {
+                        if (this.tabs.length > 0) {
+                            const nextTab = this.tabs[Math.max(0, idx - 1)];
+                            this.activateTab(nextTab.id);
+                        } else {
+                            window.location.href = '/'; 
+                        }
+                    }
+                },
+
+                updateNavHighlight(url) {
+                    const cleanUrl = url.split('?')[0];
+                    document.querySelectorAll('.list-group-item, .nav-link').forEach(link => {
+                        const href = link.getAttribute('href');
+                        if (!href) return;
+                        if (href === url || href.startsWith(cleanUrl)) {
+                            link.classList.add('active');
+                        } else {
+                            link.classList.remove('active');
+                        }
+                    });
+                },
+
+                executeScripts(container) {
+                    const scripts = container.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => {
+                            newScript.setAttribute(attr.name, attr.value);
+                        });
+                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                        
+                        document.body.appendChild(newScript);
+                        
+                        if (!newScript.src) {
+                            setTimeout(() => newScript.remove(), 1000); 
+                        }
+                    });
+                    
+                    document.dispatchEvent(new Event('DOMContentLoaded'));
+                }
+            };
+
+            document.addEventListener('DOMContentLoaded', () => {
+                TabManager.init();
+            });
+        }
     </script>
 
     <div id="page-scripts" style="display:none;">

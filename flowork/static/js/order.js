@@ -1,37 +1,44 @@
 class OrderApp {
     constructor() {
+        this.container = document.querySelector('.order-detail-container:not([data-initialized])');
+        if (!this.container) return;
+        this.container.dataset.initialized = "true";
+
         this.dom = {
-            receptionToggles: document.getElementById('reception-method-toggles'),
-            addressWrapper: document.getElementById('address-fields-wrapper'),
-            statusSelect: document.getElementById('order_status'),
-            shippingWrapper: document.getElementById('shipping-fields-wrapper'),
-            completionWrapper: document.getElementById('completion-date-wrapper'),
-            completionInput: document.getElementById('completed_at'),
-            btnSearchAddress: document.getElementById('btn-search-address'),
-            pnInput: document.getElementById('product_number'),
-            pNameInput: document.getElementById('product_name'),
-            colorSelect: document.getElementById('color'),
-            sizeSelect: document.getElementById('size'),
-            statusText: document.getElementById('product-lookup-status'),
-            btnSearch: document.getElementById('btn-product-search'),
-            resultsDiv: document.getElementById('product-search-results'),
-            processingBody: document.getElementById('processing-table-body'),
-            btnAddRow: document.getElementById('btn-add-processing-row'),
-            rowTemplate: document.getElementById('processing-row-template'),
-            btnDeleteOrder: document.getElementById('btn-delete-order'),
-            formOrder: document.getElementById('order-form'),
-            formDelete: document.getElementById('delete-order-form'),
-            btnEnableEdit: document.getElementById('btn-enable-edit')
+            receptionToggles: this.container.querySelector('#reception-method-toggles'),
+            addressWrapper: this.container.querySelector('#address-fields-wrapper'),
+            statusSelect: this.container.querySelector('#order_status'),
+            shippingWrapper: this.container.querySelector('#shipping-fields-wrapper'),
+            completionWrapper: this.container.querySelector('#completion-date-wrapper'),
+            completionInput: this.container.querySelector('#completed_at'),
+            btnSearchAddress: this.container.querySelector('#btn-search-address'),
+            pnInput: this.container.querySelector('#product_number'),
+            pNameInput: this.container.querySelector('#product_name'),
+            colorSelect: this.container.querySelector('#color'),
+            sizeSelect: this.container.querySelector('#size'),
+            btnSearch: this.container.querySelector('#btn-product-search'),
+            resultsDiv: this.container.querySelector('#product-search-results'),
+            processingBody: this.container.querySelector('#processing-table-body'),
+            btnAddRow: this.container.querySelector('#btn-add-processing-row'),
+            rowTemplate: document.getElementById('processing-row-template'), // 템플릿은 전역 ID여도 상관없음(내용만 복사하므로)
+            btnDeleteOrder: this.container.querySelector('#btn-delete-order'),
+            formOrder: this.container.querySelector('#order-form'),
+            formDelete: this.container.querySelector('#delete-order-form'),
+            btnEnableEdit: this.container.querySelector('#btn-enable-edit'),
+            postcodeInput: this.container.querySelector('#postcode'),
+            address1Input: this.container.querySelector('#address1'),
+            address2Input: this.container.querySelector('#address2')
         };
         
+        // 데이터셋 읽기
         this.urls = {
-            lookup: document.body.dataset.productLookupUrl,
-            search: document.body.dataset.productSearchUrl
+            lookup: this.container.dataset.productLookupUrl,
+            search: this.container.dataset.productSearchUrl
         };
         
         this.data = {
-            color: document.body.dataset.currentColor,
-            size: document.body.dataset.currentSize
+            color: this.container.dataset.currentColor,
+            size: this.container.dataset.currentSize
         };
 
         this.init();
@@ -45,9 +52,9 @@ class OrderApp {
             this.dom.btnSearchAddress.addEventListener('click', () => {
                 new daum.Postcode({
                     oncomplete: (data) => {
-                        document.getElementById('postcode').value = data.zonecode;
-                        document.getElementById('address1').value = data.roadAddress || data.jibunAddress;
-                        document.getElementById('address2').focus();
+                        this.dom.postcodeInput.value = data.zonecode;
+                        this.dom.address1Input.value = data.roadAddress || data.jibunAddress;
+                        this.dom.address2Input.focus();
                     }
                 }).open();
             });
@@ -72,9 +79,13 @@ class OrderApp {
         }
 
         document.addEventListener('click', (e) => {
-            if(!this.dom.pnInput || !document.body.contains(this.dom.pnInput)) return;
-            const container = this.dom.pnInput.closest('.position-relative');
-            if(container && !container.contains(e.target)) this.dom.resultsDiv.style.display = 'none';
+            if (!this.container.contains(e.target)) {
+                 if (this.dom.resultsDiv) this.dom.resultsDiv.style.display = 'none';
+            } else {
+                 if (this.dom.pnInput && !this.dom.pnInput.closest('.position-relative').contains(e.target)) {
+                     this.dom.resultsDiv.style.display = 'none';
+                 }
+            }
         });
 
         if(this.dom.btnAddRow) this.dom.btnAddRow.addEventListener('click', () => this.addProcessingRow());
@@ -97,11 +108,15 @@ class OrderApp {
         if(this.dom.btnEnableEdit) {
             this.dom.btnEnableEdit.addEventListener('click', (e) => {
                 e.preventDefault();
-                document.body.dataset.pageMode = 'edit';
-                document.querySelectorAll('.editable-on-demand').forEach(el => {
+                this.container.querySelectorAll('.editable-on-demand').forEach(el => {
                     el.disabled = false; el.readOnly = false;
                 });
-                document.getElementById('created_at').focus();
+                const createdAt = this.container.querySelector('#created_at');
+                if(createdAt) createdAt.focus();
+                
+                this.dom.btnEnableEdit.style.display = 'none';
+                const submitBtn = this.container.querySelector('#btn-submit-order');
+                if(submitBtn) submitBtn.style.display = 'inline-block';
             });
         }
 
@@ -114,19 +129,23 @@ class OrderApp {
         const selected = this.dom.receptionToggles.querySelector('input:checked');
         const isDelivery = selected && selected.value === '택배수령';
         
-        this.dom.addressWrapper.style.display = isDelivery ? 'block' : 'none';
-        document.getElementById('address1').required = isDelivery;
-        document.getElementById('address2').required = isDelivery;
+        if(this.dom.addressWrapper) {
+             this.dom.addressWrapper.style.display = isDelivery ? 'block' : 'none';
+             const addr1 = this.dom.addressWrapper.querySelector('#address1');
+             const addr2 = this.dom.addressWrapper.querySelector('#address2');
+             if(addr1) addr1.required = isDelivery;
+             if(addr2) addr2.required = isDelivery;
+        }
     }
 
     toggleStatusFields() {
         if(!this.dom.statusSelect) return;
         const status = this.dom.statusSelect.value;
         
-        this.dom.shippingWrapper.style.display = (status === '택배 발송') ? 'block' : 'none';
-        this.dom.completionWrapper.style.display = (status === '완료') ? 'block' : 'none';
+        if(this.dom.shippingWrapper) this.dom.shippingWrapper.style.display = (status === '택배 발송') ? 'block' : 'none';
+        if(this.dom.completionWrapper) this.dom.completionWrapper.style.display = (status === '완료') ? 'block' : 'none';
         
-        if(status === '완료' && !this.dom.completionInput.value) {
+        if(status === '완료' && this.dom.completionInput && !this.dom.completionInput.value) {
             this.dom.completionInput.value = Flowork.fmtDate(new Date());
         }
     }
@@ -180,7 +199,7 @@ class OrderApp {
         try {
             const data = await Flowork.post(this.urls.lookup, { product_number: pn });
             if(data.status === 'success') {
-                this.dom.pNameInput.value = data.product_name;
+                if(this.dom.pNameInput) this.dom.pNameInput.value = data.product_name;
                 this.dom.pnInput.value = data.product_number;
                 
                 this.populateSelect(this.dom.colorSelect, data.colors, this.data.color);
@@ -192,6 +211,7 @@ class OrderApp {
     }
 
     populateSelect(select, items, currentVal) {
+        if(!select) return;
         select.innerHTML = `<option value="">선택</option>`;
         items.forEach(i => {
             const selected = (i === currentVal) ? 'selected' : '';
@@ -200,6 +220,7 @@ class OrderApp {
     }
 
     addProcessingRow() {
+        if(!this.dom.rowTemplate) return;
         const clone = this.dom.rowTemplate.content.cloneNode(true);
         this.dom.processingBody.appendChild(clone);
     }
@@ -215,7 +236,7 @@ class OrderApp {
     validateForm(e) {
         const selected = this.dom.receptionToggles.querySelector('input:checked');
         if(selected && selected.value === '택배수령') {
-            if(!document.getElementById('address1').value) {
+            if(!this.dom.address1Input.value) {
                 e.preventDefault(); 
                 Flowork.toast('주소를 입력해주세요.', 'warning');
                 return;
@@ -234,5 +255,5 @@ class OrderApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('order-form')) new OrderApp();
+    if (document.querySelector('.order-detail-container')) new OrderApp();
 });

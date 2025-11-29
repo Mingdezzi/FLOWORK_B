@@ -1,41 +1,37 @@
 {% extends 'base.html' %}
 
-{% block body_attrs %}
-data-input-mode="num"
-data-live-search-url="{{ url_for('api.live_search') }}"
-data-image-url-prefix="{{ IMAGE_URL_PREFIX }}"
-{% endblock %}
-
 {% block content %}
-<div class="container my-4">
+<div class="search-container container my-4"
+     data-input-mode="num"
+     data-live-search-url="{{ url_for('api.live_search') }}"
+     data-image-url-prefix="{{ IMAGE_URL_PREFIX }}">
+     
     <div class="row">
         <div class="col-lg-5 mb-3">
-            <div class="card h-100">
-                <div class="card-header"> <h2 class="mb-0"><i class="bi bi-search me-2"></i>상품 검색</h2> </div>
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-white"> <h5 class="mb-0"><i class="bi bi-search me-2"></i>상품 검색</h5> </div>
                 <div class="card-body d-flex flex-column">
                     <form id="search-form" class="mb-2" onsubmit="return false;">
                         <div class="input-group mb-2">
                             <input type="text" id="search-query-input" name="query" class="form-control"
-                                   placeholder="품번 또는 상품명 검색..." value="{{ query or '' }}">
-
+                                   placeholder="품번 또는 상품명..." value="{{ query or '' }}">
                             <button class="btn btn-primary" type="submit" id="search-submit-btn"> <i class="bi bi-search"></i> </button>
-                            <button class="btn btn-outline-secondary ms-2" type="button" id="keypad-clear-top"><i class="bi bi-x-lg me-1"></i>CLEAR</button>
+                            <button class="btn btn-outline-secondary ms-1" type="button" id="keypad-clear-top"><i class="bi bi-x-lg"></i></button>
                         </div>
-
                         <input type="hidden" name="selected_category" id="selected-category" value="{{ selected_category or '전체' }}">
                     </form>
 
-                    <div id="category-bar" class="category-grid" 
-                         style="grid-template-columns: repeat({{ category_config.columns }}, 1fr);">
+                    <div id="category-bar" class="category-grid mb-3" 
+                         style="display:grid; grid-template-columns: repeat({{ category_config.columns }}, 1fr); gap:4px;">
                         {% for btn in category_config.buttons %}
-                        <button class="btn category-btn {{ 'active' if selected_category == btn.value else '' }}" 
+                        <button class="btn btn-sm btn-outline-secondary category-btn {{ 'active' if selected_category == btn.value else '' }}" 
                                 data-category="{{ btn.value }}">
                             {{ btn.label }}
                         </button>
                         {% endfor %}
                     </div>
 
-                    <div id="keypad-container" class="mt-auto pt-3">
+                    <div id="keypad-container" class="mt-auto pt-3 border-top">
                         
                         <div id="keypad-num" class="keypad-grid">
                             <button class="btn keypad-btn num-btn" data-key="1">1</button>
@@ -51,7 +47,7 @@ data-image-url-prefix="{{ IMAGE_URL_PREFIX }}"
                             <button class="btn keypad-btn num-btn" data-key="0">0</button>
                             <button class="btn btn-primary keypad-btn" data-key="mode-kor">한</button>
                         </div>
-
+                        
                         <div id="keypad-kor" class="keypad-qwerty keypad-hidden">
                             <div class="qwerty-row">
                                 <button class="qwerty-key" data-key="ㅂ">ㅂ</button>
@@ -132,33 +128,32 @@ data-image-url-prefix="{{ IMAGE_URL_PREFIX }}"
                                 <button class="btn btn-primary keypad-btn" data-key="mode-num">숫</button>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-7 mb-3" id="right-panel">
-            <div id="product-list-view" class="card full-height-card">
-                <div class="card-header">
+            <div id="product-list-view" class="card full-height-card border-0 shadow-sm">
+                <div class="card-header bg-white">
                     {% if showing_favorites %}
-                        <h2 class="mb-0" id="product-list-header"><i class="bi bi-star-fill me-2 text-warning"></i>즐겨찾기</h2>
+                        <h5 class="mb-0" id="product-list-header"><i class="bi bi-star-fill me-2 text-warning"></i>즐겨찾기</h5>
                     {% else %}
-                        <h2 class="mb-0" id="product-list-header"><i class="bi bi-card-list me-2"></i>
-                            상품 검색 결과
+                        <h5 class="mb-0" id="product-list-header"><i class="bi bi-card-list me-2"></i>
+                            검색 결과
                             {% if selected_category and selected_category != '전체' %}
                                 <span class="badge bg-success ms-2">{{ selected_category }}</span>
                             {% endif %}
-                        </h2>
+                        </h5>
                     {% endif %}
                 </div>
                 
-                <div class="card-body">
-                    <div class="product-list-scrollable">
+                <div class="card-body p-0">
+                    <div class="product-list-scrollable custom-scrollbar">
                         <ul class="list-group list-group-flush product-list" id="product-list-ul">
                             {% for product in products %}
                             <li class="list-group-item">
-                                <a href="{{ url_for('ui.product_detail', product_id=product.id) }}" class="product-item d-flex align-items-center text-decoration-none text-body">
+                                <a href="{{ url_for('ui.product_detail', product_id=product.id) }}" class="product-item d-flex align-items-center text-decoration-none text-body spa-link">
                                     <img src="{{ get_image_url(product) }}" alt="{{ product.product_name }}" class="item-image rounded border flex-shrink-0" onerror="imgFallback(this)">
                                     <div class="item-details flex-grow-1 ms-3">
                                         <div class="product-name fw-bold">{{ product.product_name }}</div>
@@ -174,9 +169,9 @@ data-image-url-prefix="{{ IMAGE_URL_PREFIX }}"
                                                     <span class="meta-item discount text-danger">
                                                         {{ ((1 - (first_variant.sale_price / first_variant.original_price)) * 100) | int }}%
                                                     </span>
-                                                {% else %}<span class="meta-item discount text-secondary">0%</span>{% endif %}
-                                                {% else %}<span class="meta-item sale-price">가격정보없음</span><span class="meta-item discount">-%</span>{% endif %}
-                                            {% else %}<span class="meta-item sale-price">가격정보없음</span><span class="meta-item discount">-%</span>{% endif %}
+                                                {% endif %}
+                                                {% endif %}
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </a>
@@ -189,24 +184,23 @@ data-image-url-prefix="{{ IMAGE_URL_PREFIX }}"
                         </ul>
                     </div>
                     
-                    <div class="card-footer d-flex justify-content-center p-2" style="flex-shrink: 0;">
+                    <div class="card-footer d-flex justify-content-center p-2 bg-white border-top-0" style="flex-shrink: 0;">
                         <nav aria-label="Page navigation">
-                            <ul class="pagination pagination-sm mb-0" id="search-pagination">
-                                </ul>
+                            <ul class="pagination pagination-sm mb-0" id="search-pagination"></ul>
                         </nav>
                     </div>
                 </div>
             </div>
 
-            <div id="product-detail-view" class="card full-height-card" style="display: none;">
-                <div class="card-header d-flex align-items-center">
-                    <button class="btn btn-sm btn-secondary me-2" id="btn-back-to-list">
-                        <i class="bi bi-arrow-left"></i> 뒤로가기
+            <div id="product-detail-view" class="card full-height-card border-0 shadow-sm" style="display: none;">
+                <div class="card-header d-flex align-items-center bg-white">
+                    <button class="btn btn-sm btn-outline-secondary me-3" id="btn-back-to-list">
+                        <i class="bi bi-arrow-left"></i> 뒤로
                     </button>
-                    <h2 class="mb-0 fs-5">상품 상세</h2>
+                    <h5 class="mb-0">상품 상세</h5>
                 </div>
-                <div class="card-body p-0">
-                    <iframe id="product-detail-iframe" src="about:blank" class="detail-iframe-container"></iframe>
+                <div class="card-body p-0 position-relative">
+                    <iframe id="product-detail-iframe" src="about:blank" class="detail-iframe-container w-100 h-100 border-0"></iframe>
                 </div>
             </div>
         </div>

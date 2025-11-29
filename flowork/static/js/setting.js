@@ -1,6 +1,11 @@
 class SettingApp {
     constructor() {
-        const ds = document.body.dataset;
+        // [중요] 초기화되지 않은 컨테이너 찾기 (탭 격리)
+        this.container = document.querySelector('.setting-container:not([data-initialized])');
+        if (!this.container) return;
+        this.container.dataset.initialized = "true";
+
+        const ds = this.container.dataset;
         this.urls = {
             setBrand: ds.apiBrandNameSetUrl,
             addStore: ds.apiStoresAddUrl,
@@ -21,18 +26,52 @@ class SettingApp {
     }
 
     cacheDom() {
+        const c = this.container;
+        // 모달은 탭 컨텐츠 영역(page-content-layer) 안에 같이 렌더링되므로 
+        // container의 상위(page-content-layer)를 찾아 거기서 모달을 검색합니다.
+        const parent = c.closest('.page-content-layer') || document;
+
         return {
-            formBrand: document.getElementById('form-brand-name'),
-            btnLoadSettings: document.getElementById('btn-load-settings'),
-            formAddStore: document.getElementById('form-add-store'),
-            tableStores: document.getElementById('all-stores-table'),
-            formAddStaff: document.getElementById('form-add-staff'),
-            tableStaff: document.getElementById('all-staff-table'),
-            formCat: document.getElementById('form-category-config'),
-            catContainer: document.getElementById('cat-buttons-container'),
-            btnCatAdd: document.getElementById('btn-add-cat-row'),
-            modalStore: new bootstrap.Modal(document.getElementById('edit-store-modal') || document.createElement('div')),
-            modalStaff: new bootstrap.Modal(document.getElementById('edit-staff-modal') || document.createElement('div'))
+            formBrand: c.querySelector('#form-brand-name'),
+            btnLoadSettings: c.querySelector('#btn-load-settings'),
+            formAddStore: c.querySelector('#form-add-store'),
+            tableStores: c.querySelector('#all-stores-table'),
+            formAddStaff: c.querySelector('#form-add-staff'),
+            tableStaff: c.querySelector('#all-staff-table'),
+            formCat: c.querySelector('#form-category-config'),
+            catContainer: c.querySelector('#cat-buttons-container'),
+            btnCatAdd: c.querySelector('#btn-add-cat-row'),
+            
+            // Bootstrap Modal 인스턴스 (parent 범위 내)
+            modalStore: new bootstrap.Modal(parent.querySelector('#edit-store-modal')),
+            modalStaff: new bootstrap.Modal(parent.querySelector('#edit-staff-modal')),
+
+            // 모달 내부 요소들 (저장 버튼 등)
+            editStoreInputs: {
+                code: parent.querySelector('#edit_store_code'),
+                name: parent.querySelector('#edit_store_name'),
+                phone: parent.querySelector('#edit_store_phone'),
+                btnSave: parent.querySelector('#btn-save-edit-store')
+            },
+            editStaffInputs: {
+                name: parent.querySelector('#edit_staff_name'),
+                pos: parent.querySelector('#edit_staff_position'),
+                contact: parent.querySelector('#edit_staff_contact'),
+                btnSave: parent.querySelector('#btn-save-edit-staff')
+            },
+            // 추가 입력 필드 (add)
+            newStoreInputs: {
+                code: c.querySelector('#new_store_code'),
+                name: c.querySelector('#new_store_name'),
+                phone: c.querySelector('#new_store_phone')
+            },
+            newStaffInputs: {
+                name: c.querySelector('#new_staff_name'),
+                pos: c.querySelector('#new_staff_position'),
+                contact: c.querySelector('#new_staff_contact')
+            },
+            brandNameInput: c.querySelector('#brand-name-input'),
+            catColumnsInput: c.querySelector('#cat-columns')
         };
     }
 
@@ -45,11 +84,12 @@ class SettingApp {
             this.dom.tableStores.addEventListener('click', (e) => {
                 const btn = e.target.closest('a, button');
                 if(!btn) return;
+                // 클래스명 체크
                 if(btn.classList.contains('btn-delete-store')) { e.preventDefault(); this.deleteStore(btn); }
                 if(btn.classList.contains('btn-edit-store')) { e.preventDefault(); this.openStoreModal(btn); }
-                if(btn.classList.contains('btn-approve-store')) this.approveStore(btn);
+                if(btn.classList.contains('btn-approve-store')) { e.preventDefault(); this.approveStore(btn); }
                 if(btn.classList.contains('btn-reset-store')) { e.preventDefault(); this.resetStore(btn); }
-                if(btn.classList.contains('btn-toggle-active-store')) this.toggleStoreActive(btn);
+                if(btn.classList.contains('btn-toggle-active-store')) { e.preventDefault(); this.toggleStoreActive(btn); }
             });
         }
 
@@ -66,16 +106,18 @@ class SettingApp {
 
         this.initCategoryForm();
         
-        const btnSaveStore = document.getElementById('btn-save-edit-store');
-        if(btnSaveStore) btnSaveStore.addEventListener('click', () => this.saveStoreEdit(btnSaveStore));
-        
-        const btnSaveStaff = document.getElementById('btn-save-edit-staff');
-        if(btnSaveStaff) btnSaveStaff.addEventListener('click', () => this.saveStaffEdit(btnSaveStaff));
+        // 모달 저장 버튼 이벤트 (bind)
+        if(this.dom.editStoreInputs.btnSave) {
+            this.dom.editStoreInputs.btnSave.addEventListener('click', () => this.saveStoreEdit(this.dom.editStoreInputs.btnSave));
+        }
+        if(this.dom.editStaffInputs.btnSave) {
+            this.dom.editStaffInputs.btnSave.addEventListener('click', () => this.saveStaffEdit(this.dom.editStaffInputs.btnSave));
+        }
     }
 
     async setBrandName(e) {
         e.preventDefault();
-        const name = document.getElementById('brand-name-input').value.trim();
+        const name = this.dom.brandNameInput.value.trim();
         if(!name) return Flowork.toast('이름을 입력하세요', 'warning');
         
         try {
@@ -90,6 +132,7 @@ class SettingApp {
         try {
             const res = await Flowork.post(this.urls.loadSettings, {});
             Flowork.toast(res.message, 'success');
+            setTimeout(() => window.location.reload(), 1500);
         } catch(e) {
             Flowork.toast(e.message, 'danger');
         } finally {
@@ -100,9 +143,9 @@ class SettingApp {
     async addStore(e) {
         e.preventDefault();
         const payload = {
-            store_code: document.getElementById('new_store_code').value,
-            store_name: document.getElementById('new_store_name').value,
-            store_phone: document.getElementById('new_store_phone').value
+            store_code: this.dom.newStoreInputs.code.value,
+            store_name: this.dom.newStoreInputs.name.value,
+            store_phone: this.dom.newStoreInputs.phone.value
         };
         try {
             const res = await Flowork.post(this.urls.addStore, payload);
@@ -121,23 +164,24 @@ class SettingApp {
     }
 
     openStoreModal(btn) {
-        document.getElementById('edit_store_code').value = btn.dataset.code;
-        document.getElementById('edit_store_name').value = btn.dataset.name;
-        document.getElementById('edit_store_phone').value = btn.dataset.phone;
-        document.getElementById('btn-save-edit-store').dataset.storeId = btn.dataset.id;
+        this.dom.editStoreInputs.code.value = btn.dataset.code;
+        this.dom.editStoreInputs.name.value = btn.dataset.name;
+        this.dom.editStoreInputs.phone.value = btn.dataset.phone;
+        this.dom.editStoreInputs.btnSave.dataset.storeId = btn.dataset.id;
         this.dom.modalStore.show();
     }
 
     async saveStoreEdit(btn) {
         const id = btn.dataset.storeId;
         const payload = {
-            store_code: document.getElementById('edit_store_code').value,
-            store_name: document.getElementById('edit_store_name').value,
-            store_phone: document.getElementById('edit_store_phone').value
+            store_code: this.dom.editStoreInputs.code.value,
+            store_name: this.dom.editStoreInputs.name.value,
+            store_phone: this.dom.editStoreInputs.phone.value
         };
         try {
             await Flowork.post(`${this.urls.updateStore}${id}`, payload);
             Flowork.toast('수정되었습니다', 'success');
+            this.dom.modalStore.hide();
             setTimeout(() => window.location.reload(), 1000);
         } catch(e) { Flowork.toast(e.message, 'danger'); }
     }
@@ -171,9 +215,9 @@ class SettingApp {
     async addStaff(e) {
         e.preventDefault();
         const payload = {
-            name: document.getElementById('new_staff_name').value,
-            position: document.getElementById('new_staff_position').value,
-            contact: document.getElementById('new_staff_contact').value
+            name: this.dom.newStaffInputs.name.value,
+            position: this.dom.newStaffInputs.pos.value,
+            contact: this.dom.newStaffInputs.contact.value
         };
         try {
             await Flowork.post(this.urls.addStaff, payload);
@@ -192,23 +236,24 @@ class SettingApp {
     }
 
     openStaffModal(btn) {
-        document.getElementById('edit_staff_name').value = btn.dataset.name;
-        document.getElementById('edit_staff_position').value = btn.dataset.position;
-        document.getElementById('edit_staff_contact').value = btn.dataset.contact;
-        document.getElementById('btn-save-edit-staff').dataset.staffId = btn.dataset.id;
+        this.dom.editStaffInputs.name.value = btn.dataset.name;
+        this.dom.editStaffInputs.pos.value = btn.dataset.position;
+        this.dom.editStaffInputs.contact.value = btn.dataset.contact;
+        this.dom.editStaffInputs.btnSave.dataset.staffId = btn.dataset.id;
         this.dom.modalStaff.show();
     }
 
     async saveStaffEdit(btn) {
         const id = btn.dataset.staffId;
         const payload = {
-            name: document.getElementById('edit_staff_name').value,
-            position: document.getElementById('edit_staff_position').value,
-            contact: document.getElementById('edit_staff_contact').value
+            name: this.dom.editStaffInputs.name.value,
+            position: this.dom.editStaffInputs.pos.value,
+            contact: this.dom.editStaffInputs.contact.value
         };
         try {
             await Flowork.post(`${this.urls.updateStaff}${id}`, payload);
             Flowork.toast('수정되었습니다', 'success');
+            this.dom.modalStaff.hide();
             setTimeout(() => window.location.reload(), 1000);
         } catch(e) { Flowork.toast(e.message, 'danger'); }
     }
@@ -228,7 +273,7 @@ class SettingApp {
         };
 
         if(saved) {
-            if(saved.columns) document.getElementById('cat-columns').value = saved.columns;
+            if(saved.columns) this.dom.catColumnsInput.value = saved.columns;
             if(saved.buttons) {
                 this.dom.catContainer.innerHTML = '';
                 saved.buttons.forEach(b => addRow(b.label, b.value));
@@ -254,7 +299,7 @@ class SettingApp {
             });
             
             const config = {
-                columns: parseInt(document.getElementById('cat-columns').value),
+                columns: parseInt(this.dom.catColumnsInput.value),
                 buttons: buttons
             };
             
@@ -269,5 +314,5 @@ class SettingApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('form-brand-name')) new SettingApp();
+    if (document.querySelector('.setting-container')) new SettingApp();
 });

@@ -1,8 +1,13 @@
 class StockApp {
     constructor() {
+        // 스코프 격리: 초기화되지 않은 컨테이너 찾기
+        this.container = document.querySelector('.stock-mgmt-container:not([data-initialized])');
+        if (!this.container) return;
+        this.container.dataset.initialized = "true";
+
         this.dom = {
-            analyzeExcelUrl: document.body.dataset.analyzeExcelUrl,
-            horizontalSwitches: document.querySelectorAll('.horizontal-mode-switch')
+            analyzeExcelUrl: this.container.dataset.analyzeExcelUrl,
+            horizontalSwitches: this.container.querySelectorAll('.horizontal-mode-switch')
         };
         
         this.init();
@@ -51,11 +56,12 @@ class StockApp {
 
     setupExcelAnalyzer(config) {
         const { fileInputId, formId, wrapperId, statusId, gridId } = config;
-        const fileInput = document.getElementById(fileInputId);
-        const form = document.getElementById(formId);
-        const wrapper = document.getElementById(wrapperId);
-        const statusText = document.getElementById(statusId);
-        const grid = document.getElementById(gridId);
+        // [중요] 컨테이너 내부에서 요소 찾기
+        const fileInput = this.container.querySelector(`#${fileInputId}`);
+        const form = this.container.querySelector(`#${formId}`);
+        const wrapper = this.container.querySelector(`#${wrapperId}`);
+        const statusText = this.container.querySelector(`#${statusId}`);
+        const grid = this.container.querySelector(`#${gridId}`);
         
         if (!fileInput || !form || !grid) return;
 
@@ -158,7 +164,7 @@ class StockApp {
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!confirm('엑셀 업로드를 시작하시겠습니까?')) return;
+            if (!confirm('엑셀 파일 검증 및 업로드를 시작하시겠습니까?')) return;
 
             const formData = new FormData(form);
             
@@ -194,15 +200,29 @@ class StockApp {
     }
 
     showVerificationModal(rows, formData, confirmCallback) {
-        const modalEl = document.getElementById('verification-modal');
-        if (!modalEl || typeof bootstrap === 'undefined') {
+        // 모달은 템플릿에 포함되어 있으나, bootstrap Modal 인스턴스를 만들 때 ID 충돌 방지를 위해 
+        // container 부모의 sibling인 모달을 찾거나, 전역 모달을 쓰되 내용을 동적으로 채워야 함.
+        // TabManager 구조상 모든 모달도 .unique-content-area 안에 래핑되어 있음.
+        // 따라서 this.container의 형제 요소가 아니라 this.container 내부 혹은 근처에 있음.
+        // 하지만 stock.html 구조를 보면 모달은 block content의 마지막에 있음.
+        // 즉, this.container의 형제가 아니라, .stock-mgmt-container의 형제일 수 있음 (block content 전체가 container로 감싸지지 않음).
+        
+        // *수정*: stock.html 에서는 .stock-mgmt-container 가 block content의 첫 요소이고,
+        // 모달은 그 뒤에 있음. 따라서 this.container의 다음 형제 요소들 중에서 모달을 찾아야 함.
+        
+        // 안전한 방법: 현재 탭 페이지 레이어(.page-content-layer) 내부에서 검색
+        const pageLayer = this.container.closest('.page-content-layer');
+        const scopedModalEl = pageLayer ? pageLayer.querySelector('#verification-modal') : document.getElementById('verification-modal');
+        
+        if (!scopedModalEl || typeof bootstrap === 'undefined') {
             if(confirm(`검증 경고: ${rows.length}개의 의심 행이 있습니다. 진행하시겠습니까?`)) confirmCallback();
             return;
         }
         
-        const modal = new bootstrap.Modal(modalEl);
-        const tbody = document.getElementById('suspicious-rows-tbody');
-        document.getElementById('suspicious-count').textContent = rows.length;
+        const modal = new bootstrap.Modal(scopedModalEl);
+        const tbody = scopedModalEl.querySelector('#suspicious-rows-tbody');
+        const countSpan = scopedModalEl.querySelector('#suspicious-count');
+        if(countSpan) countSpan.textContent = rows.length;
         
         tbody.innerHTML = rows.map(r => `
             <tr data-row-index="${r.row_index}">
@@ -224,11 +244,8 @@ class StockApp {
             }
         };
 
-        const btnConfirm = document.getElementById('btn-confirm-upload');
-        const newBtn = btnConfirm.cloneNode(true);
-        btnConfirm.parentNode.replaceChild(newBtn, btnConfirm);
-        
-        newBtn.onclick = () => {
+        const btnConfirm = scopedModalEl.querySelector('#btn-confirm-upload');
+        btnConfirm.onclick = () => {
             const excluded = Array.from(tbody.querySelectorAll('tr.excluded')).map(tr => tr.dataset.rowIndex);
             formData.append('excluded_row_indices', excluded.join(','));
             modal.hide();
@@ -240,7 +257,8 @@ class StockApp {
 
     async startUpload(url, formData, progressBar, progressStatus, submitButton) {
         if(submitButton) submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 업로드 중...';
-        if(document.querySelector('.progress-wrapper')) document.querySelector('.progress-wrapper').style.display = 'block';
+        const pWrapper = this.container.querySelector('.progress-wrapper');
+        if(pWrapper) pWrapper.style.display = 'block';
 
         try {
             const response = await fetch(url, {
@@ -255,7 +273,7 @@ class StockApp {
                     this.pollTask(data.task_id, progressBar, progressStatus);
                 } else {
                     Flowork.toast(data.message, 'success');
-                    window.location.reload();
+                    setTimeout(() => window.location.reload(), 1500);
                 }
             } else {
                 throw new Error(data.message);
@@ -294,5 +312,5 @@ class StockApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('form-update-store')) new StockApp();
+    if (document.querySelector('.stock-mgmt-container')) new StockApp();
 });

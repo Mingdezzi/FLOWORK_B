@@ -1,48 +1,6 @@
 {% extends 'base.html' %}
 
-{% block body_attrs %}
-data-api-urls='{
-    "searchSalesProducts": "{{ url_for("api.search_sales_products") }}",
-    "getRefundRecords": "{{ url_for("api.get_refund_records") }}",
-    "submitSales": "{{ url_for("api.create_sale") }}",
-    "saleDetails": "{{ url_for("api.get_sale_details", sale_id=999999) }}",
-    "refund": "{{ url_for("api.refund_sale", sale_id=999999) }}",
-    "salesSettings": "{{ url_for("api.sales_settings") }}"
-}'
-data-target-store-id="{{ target_store_id }}"
-{% endblock %}
-
 {% block content %}
-<style>
-    .sales-container { display: flex; gap: 15px; height: calc(100vh - 140px); overflow: hidden; }
-    .sales-left { flex: 1.2; display: flex; flex-direction: column; overflow: hidden; }
-    .sales-right { flex: 1.5; display: flex; flex-direction: column; border-left: 1px solid #e9ecef; padding-left: 15px; overflow: hidden; }
-    
-    .cart-table-wrapper { flex-grow: 1; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; box-shadow: inset 0 1px 4px rgba(0,0,0,0.02); }
-    .left-table-wrapper { flex-grow: 1; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 6px; background: #fff; margin-top: 8px; }
-    
-    .left-table { font-size: 0.85rem; width: 100%; table-layout: fixed; } 
-    .left-table th, .left-table td { padding: 4px 6px; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .left-table tbody tr { cursor: pointer; transition: background 0.1s; }
-    .left-table tbody tr:hover { background-color: #e9ecef; }
-    
-    .cart-input { width: 100%; max-width: 60px; text-align: center; padding: 2px 0; font-size: 0.9rem; border: 1px solid #ced4da; border-radius: 4px; }
-    
-    /* Mobile Tabs */
-    .mobile-sales-tabs { display: none; margin-bottom: 10px; }
-    .mobile-tab-btn { flex: 1; border-radius: 0; padding: 8px; font-weight: 600; font-size: 0.9rem; }
-    .mobile-tab-btn.active { background-color: #eb6864; color: white; border-color: #eb6864; }
-
-    @media (max-width: 991px) {
-        .sales-container { display: block; height: auto; padding-bottom: 60px; }
-        .mobile-sales-tabs { display: flex; position: sticky; top: 0; z-index: 10; background: #f4f6f9; padding-bottom: 5px; }
-        .sales-left, .sales-right { display: none; border: none; padding: 0; height: auto; }
-        .sales-left.active, .sales-right.active { display: flex; }
-        .left-table-wrapper { max-height: 50vh; min-height: 300px; }
-        .cart-table-wrapper { max-height: 50vh; min-height: 300px; }
-    }
-</style>
-
 <div class="mobile-sales-tabs btn-group w-100" role="group">
     <button type="button" class="btn btn-outline-secondary mobile-tab-btn active" data-target="sales-left">
         <i class="bi bi-search me-1"></i>상품검색
@@ -52,9 +10,18 @@ data-target-store-id="{{ target_store_id }}"
     </button>
 </div>
 
-<div class="sales-container">
+<div class="sales-container" 
+     data-target-store-id="{{ target_store_id }}"
+     data-api-urls='{
+        "searchSalesProducts": "{{ url_for("api.search_sales_products") }}",
+        "getRefundRecords": "{{ url_for("api.get_refund_records") }}",
+        "submitSales": "{{ url_for("api.create_sale") }}",
+        "saleDetails": "{{ url_for("api.get_sale_details", sale_id=999999) }}",
+        "refund": "{{ url_for("api.refund_sale", sale_id=999999) }}",
+        "salesSettings": "{{ url_for("api.sales_settings") }}"
+     }'>
+     
     <div class="sales-left active" id="sales-left-panel">
-        
         {% if not current_user.store_id %}
         <div class="mb-2">
             <select class="form-select form-select-sm border-primary" onchange="window.location.href='{{ url_for('ui.sales_register') }}?store_id=' + this.value">
@@ -165,9 +132,4 @@ data-target-store-id="{{ target_store_id }}"
 
 <div class="modal fade" id="detail-modal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header py-2"><h6 class="modal-title fw-bold" id="detail-modal-title">옵션 선택</h6><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0"><div class="table-responsive"><table class="table table-hover text-center mb-0" style="font-size: 0.9rem;"><thead class="table-light"><tr><th>컬러</th><th>사이즈</th><th>재고</th><th>가</th><th>선택</th></tr></thead><tbody id="detail-modal-tbody"></tbody></table></div></div></div></div></div>
 <div class="modal fade" id="records-modal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header bg-danger text-white py-2"><h6 class="modal-title" id="records-modal-title">환불 대상 선택</h6><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0"><div class="table-responsive"><table class="table table-hover text-center mb-0" style="font-size: 0.85rem;"><thead class="table-light"><tr><th>날짜</th><th>영수증</th><th>상품</th><th>옵션</th><th>가</th></tr></thead><tbody id="records-modal-tbody"></tbody></table></div></div></div></div></div>
-{% endblock %}
-
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/common.js') }}"></script>
-<script src="{{ url_for('static', filename='js/sales.js') }}"></script>
 {% endblock %}

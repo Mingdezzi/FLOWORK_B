@@ -1,13 +1,5 @@
 {% extends 'base.html' %}
 
-{% block body_attrs %}
-data-product-lookup-url="{{ url_for('api.api_find_product_details') }}"
-data-product-search-url="{{ url_for('api.api_order_product_search') }}"
-data-current-color="{{ data.color or '' }}"
-data-current-size="{{ data.size or '' }}"
-data-page-mode="{{ 'view' if is_view_mode else 'edit' }}"
-{% endblock %}
-
 {% block content %}
 <style>
     .step-indicator { display: flex; justify-content: space-between; padding: 0; margin: 0 0 20px 0; list-style: none; position: relative; }
@@ -15,42 +7,30 @@ data-page-mode="{{ 'view' if is_view_mode else 'edit' }}"
     .step-item { position: relative; z-index: 2; text-align: center; width: 20%; }
     .step-circle { width: 32px; height: 32px; border-radius: 50%; background: #e9ecef; color: #6c757d; line-height: 32px; font-weight: bold; margin: 0 auto 5px; border: 2px solid #fff; transition: all 0.3s; }
     .step-label { font-size: 0.75rem; color: #adb5bd; font-weight: 500; }
-    
     .step-item.active .step-circle { background: #eb6864; color: #fff; transform: scale(1.1); box-shadow: 0 0 0 3px rgba(235, 104, 100, 0.2); }
     .step-item.active .step-label { color: #eb6864; font-weight: bold; }
     .step-item.completed .step-circle { background: #198754; color: #fff; }
     .step-item.completed .step-label { color: #198754; }
 </style>
 
-<div class="container my-3">
+<div class="order-detail-container container my-3"
+     data-product-lookup-url="{{ url_for('api.api_find_product_details') }}"
+     data-product-search-url="{{ url_for('api.api_order_product_search') }}"
+     data-current-color="{{ data.color or '' }}"
+     data-current-size="{{ data.size or '' }}"
+     data-page-mode="{{ 'view' if is_view_mode else 'edit' }}">
     
     {% if order and order.id %}
     {% set status_map = {'고객주문': 1, '주문등록': 2, '매장도착': 3, '고객연락': 4, '택배 발송': 4, '완료': 5} %}
     {% set current_step = status_map.get(order.order_status, 1) %}
-    
     <div class="card mb-4 border-0 shadow-sm">
         <div class="card-body pt-4 pb-2">
             <ul class="step-indicator">
-                <li class="step-item {{ 'completed' if current_step > 1 else ('active' if current_step == 1 else '') }}">
-                    <div class="step-circle"><i class="bi bi-person"></i></div>
-                    <div class="step-label">주문</div>
-                </li>
-                <li class="step-item {{ 'completed' if current_step > 2 else ('active' if current_step == 2 else '') }}">
-                    <div class="step-circle"><i class="bi bi-pencil"></i></div>
-                    <div class="step-label">등록</div>
-                </li>
-                <li class="step-item {{ 'completed' if current_step > 3 else ('active' if current_step == 3 else '') }}">
-                    <div class="step-circle"><i class="bi bi-box-seam"></i></div>
-                    <div class="step-label">입고</div>
-                </li>
-                <li class="step-item {{ 'completed' if current_step > 4 else ('active' if current_step == 4 else '') }}">
-                    <div class="step-circle"><i class="bi bi-telephone"></i></div>
-                    <div class="step-label">연락/발송</div>
-                </li>
-                <li class="step-item {{ 'completed' if current_step > 5 else ('active' if current_step == 5 else '') }}">
-                    <div class="step-circle"><i class="bi bi-check-lg"></i></div>
-                    <div class="step-label">완료</div>
-                </li>
+                <li class="step-item {{ 'completed' if current_step > 1 else ('active' if current_step == 1 else '') }}"><div class="step-circle"><i class="bi bi-person"></i></div><div class="step-label">주문</div></li>
+                 <li class="step-item {{ 'completed' if current_step > 2 else ('active' if current_step == 2 else '') }}"><div class="step-circle"><i class="bi bi-pencil"></i></div><div class="step-label">등록</div></li>
+                 <li class="step-item {{ 'completed' if current_step > 3 else ('active' if current_step == 3 else '') }}"><div class="step-circle"><i class="bi bi-box-seam"></i></div><div class="step-label">입고</div></li>
+                 <li class="step-item {{ 'completed' if current_step > 4 else ('active' if current_step == 4 else '') }}"><div class="step-circle"><i class="bi bi-telephone"></i></div><div class="step-label">연락/발송</div></li>
+                 <li class="step-item {{ 'completed' if current_step > 5 else ('active' if current_step == 5 else '') }}"><div class="step-circle"><i class="bi bi-check-lg"></i></div><div class="step-label">완료</div></li>
             </ul>
         </div>
     </div>
@@ -153,7 +133,7 @@ data-page-mode="{{ 'view' if is_view_mode else 'edit' }}"
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td><select name="processing_source" class="form-select form-select-sm border-0 editable-on-demand" required {{ 'disabled' if is_view_mode else '' }}><option value="">선택</option>{% for source in order_sources %}<option value="{{ source.id }}">{{ source.store_name }}</option>{% endfor %}</select></td>
+                                <td><select name="processing_source" class="form-select form-select-sm border-0 editable-on-demand" required {{ 'disabled' if is_view_mode else '' }}><option value="">선택</option>{% for source in order_sources %}<option value="{{ source.id }}" {{ 'selected' if (step.source_store_id == source.id) or (form_data and step[0] | string == source.id | string) else '' }}>{{ source.store_name }}</option>{% endfor %}</select></td>
                                 <td><select name="processing_result" class="form-select form-select-sm border-0"><option value="">-</option><option value="완료">완료</option><option value="불가">불가</option></select></td>
                                 <td><i class="bi bi-x text-danger btn-delete-row editable-on-demand" style="cursor:pointer;" {{ 'disabled' if is_view_mode else '' }}></i></td>
                             </tr>

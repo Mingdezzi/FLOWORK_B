@@ -1,22 +1,27 @@
 class CheckApp {
     constructor() {
+        this.container = document.querySelector('.check-container:not([data-initialized])');
+        if (!this.container) return; 
+        this.container.dataset.initialized = "true";
+
         this.dom = {
-            barcodeInput: document.getElementById('barcode-input'),
-            toggleBtn: document.getElementById('toggle-scan-btn'),
-            scanTableBody: document.getElementById('scan-table-body'),
-            scanStatusMsg: document.getElementById('scan-status-msg'),
-            scanTotalStatus: document.getElementById('scan-total-status'),
-            clearBtn: document.getElementById('clear-scan-btn'),
-            submitBtn: document.getElementById('submit-scan-btn'),
-            targetStoreSelect: document.getElementById('target_store_select'),
-            exportBtn: document.getElementById('btn-export-excel'),
-            resetHiddenInput: document.getElementById('reset_target_store_id'),
-            resetForm: document.getElementById('form-reset-stock')
+            barcodeInput: this.container.querySelector('#barcode-input'),
+            toggleBtn: this.container.querySelector('#toggle-scan-btn'),
+            scanTableBody: this.container.querySelector('#scan-table-body'),
+            scanStatusMsg: this.container.querySelector('#scan-status-msg'),
+            scanTotalStatus: this.container.querySelector('#scan-total-status'),
+            clearBtn: this.container.querySelector('#clear-scan-btn'),
+            submitBtn: this.container.querySelector('#submit-scan-btn'),
+            targetStoreSelect: this.container.querySelector('#target_store_select'),
+            exportBtn: this.container.querySelector('#btn-export-excel'),
+            resetHiddenInput: this.container.querySelector('#reset_target_store_id'),
+            resetForm: this.container.querySelector('#form-reset-stock')
         };
 
+        // 컨테이너 dataset에서 URL 읽기
         this.urls = {
-            fetch: document.body.dataset.apiFetchVariantUrl,
-            update: document.body.dataset.bulkUpdateActualStockUrl
+            fetch: this.container.dataset.apiFetchVariantUrl,
+            update: this.container.dataset.bulkUpdateActualStockUrl
         };
 
         this.state = {
@@ -27,7 +32,7 @@ class CheckApp {
 
         this.init();
     }
-
+    // ... (나머지 로직은 이전과 동일하되, Flowork.toast 사용) ...
     init() {
         if (this.dom.targetStoreSelect) {
             this.dom.targetStoreSelect.addEventListener('change', () => {
@@ -269,5 +274,5 @@ class CheckApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('scan-table-body')) new CheckApp();
+    if (document.querySelector('.check-container')) new CheckApp();
 });
