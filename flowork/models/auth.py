@@ -6,7 +6,8 @@ class User(UserMixin, db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), unique=True, nullable=False)
+    # [수정] unique=True 제거 (브랜드 간 아이디 중복 허용)
+    username = db.Column(db.String(50), nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='staff')
     
@@ -21,6 +22,11 @@ class User(UserMixin, db.Model):
     # 관계 설정
     brand = db.relationship('Brand', backref='users')
     store = db.relationship('Store', backref='users')
+
+    # [신규] 브랜드 내에서만 아이디 중복 방지 (슈퍼관리자는 brand_id가 NULL이므로 예외)
+    __table_args__ = (
+        db.UniqueConstraint('brand_id', 'username', name='_brand_username_uc'),
+    )
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
