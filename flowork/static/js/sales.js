@@ -1,7 +1,7 @@
 class SalesApp {
     constructor() {
         this.urls = JSON.parse(document.body.dataset.apiUrls);
-        this.targetStoreId = document.body.dataset.targetStoreId; // 추가
+        this.targetStoreId = document.body.dataset.targetStoreId;
         this.mode = 'sales';
         this.cart = [];
         this.heldCart = null;
@@ -16,6 +16,8 @@ class SalesApp {
     cacheDom() {
         return {
             leftPanel: document.getElementById('sales-left-panel'),
+            rightPanel: document.getElementById('sales-right-panel'),
+            mobileTabs: document.querySelectorAll('.mobile-tab-btn'),
             dateSales: document.getElementById('date-area-sales'),
             dateRefund: document.getElementById('date-area-refund'),
             saleDate: document.getElementById('sale-date'),
@@ -25,11 +27,11 @@ class SalesApp {
             modeRefund: document.getElementById('mode-refund'),
             searchInput: document.getElementById('search-input'),
             btnSearch: document.getElementById('btn-search'),
-            leftThead: document.getElementById('left-table-head'),
             leftTbody: document.getElementById('left-table-body'),
             cartTbody: document.getElementById('cart-tbody'),
             totalQty: document.getElementById('total-qty'),
             totalAmt: document.getElementById('total-amount'),
+            mobileCartBadge: document.getElementById('mobile-cart-badge'),
             salesActions: document.getElementById('sales-actions'),
             refundActions: document.getElementById('refund-actions'),
             refundInfo: document.getElementById('refund-target-info'),
@@ -72,6 +74,13 @@ class SalesApp {
         this.dom.btnHold.addEventListener('click', () => this.toggleHold());
         this.dom.btnDiscount.addEventListener('click', () => this.applyAutoDiscount());
 
+        this.dom.mobileTabs.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetId = e.currentTarget.dataset.target;
+                this.switchMobileTab(targetId);
+            });
+        });
+
         const modalHiddenHandler = () => {
             if(document.body.contains(this.dom.searchInput)) this.dom.searchInput.focus();
         };
@@ -80,7 +89,20 @@ class SalesApp {
         document.getElementById('records-modal').addEventListener('hidden.bs.modal', modalHiddenHandler);
     }
 
-    // API 호출 시 target_store_id 추가
+    switchMobileTab(targetId) {
+        this.dom.mobileTabs.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.target === targetId);
+        });
+        
+        if (targetId === 'sales-left') {
+            this.dom.leftPanel.classList.add('active');
+            this.dom.rightPanel.classList.remove('active');
+        } else {
+            this.dom.leftPanel.classList.remove('active');
+            this.dom.rightPanel.classList.add('active');
+        }
+    }
+
     async post(url, data) {
         if (this.targetStoreId) {
             data.target_store_id = this.targetStoreId;
@@ -88,13 +110,8 @@ class SalesApp {
         return await Flowork.post(url, data);
     }
     
-    // GET 요청은 쿼리 파라미터로 처리되므로 (이미 URL에 포함되거나 별도 처리),
-    // settings 같은 경우 POST로 받는 경우도 있으니 유의.
-    
     async loadSettings() {
         try {
-            // Settings API는 GET일 때도 target_store_id가 필요할 수 있음. 
-            // SalesApp에서는 GET /api/sales/settings 호출. 이 endpoint는 query param도 받도록 수정됨.
             let url = this.urls.salesSettings;
             if (this.targetStoreId) {
                 url += (url.includes('?') ? '&' : '?') + 'target_store_id=' + this.targetStoreId;
@@ -112,16 +129,14 @@ class SalesApp {
         this.dom.searchInput.value = '';
 
         const isSales = (mode === 'sales');
-        this.dom.leftPanel.className = isSales ? 'sales-left mode-sales-bg' : 'sales-left mode-refund-bg';
-        
         this.dom.dateSales.style.display = isSales ? 'block' : 'none';
         this.dom.dateRefund.style.display = isSales ? 'none' : 'block';
         
         this.dom.salesActions.style.display = isSales ? 'block' : 'none';
-        this.dom.refundActions.style.display = isSales ? 'none' : 'flex';
+        this.dom.refundActions.style.display = isSales ? 'none' : 'block';
         
-        const titleHtml = isSales ? '<i class="bi bi-cart4"></i> 판매 목록' : '<i class="bi bi-arrow-return-left"></i> 환불 목록';
-        document.getElementById('right-panel-title').innerHTML = titleHtml;
+        if (!isSales) this.dom.btnToggleOnline.style.display = 'none';
+        else this.dom.btnToggleOnline.style.display = 'block';
     }
 
     toggleOnline() {
@@ -136,12 +151,7 @@ class SalesApp {
         const query = this.dom.searchInput.value.trim();
         if (!query) return;
 
-        const headers = this.mode === 'sales' 
-            ? ['품번','품명','컬러','년도','최초가','판매가','재고'] 
-            : ['품번','품명','컬러','년도','최초가','판매가','판매량'];
-        
-        this.dom.leftThead.innerHTML = `<tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr>`;
-        this.dom.leftTbody.innerHTML = '<tr><td colspan="7" class="text-center">검색 중...</td></tr>';
+        this.dom.leftTbody.innerHTML = '<tr><td colspan="4" class="text-center py-3">검색 중...</td></tr>';
 
         try {
             const payload = {
@@ -151,12 +161,11 @@ class SalesApp {
                 end_date: this.dom.refundEnd.value
             };
             
-            // this.post wrapper 사용
             const data = await this.post(this.urls.searchSalesProducts, payload);
             this.dom.leftTbody.innerHTML = '';
 
             if (!data.results || data.results.length === 0) {
-                this.dom.leftTbody.innerHTML = '<tr><td colspan="7" class="text-center">검색 결과가 없습니다.</td></tr>';
+                this.dom.leftTbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">검색 결과가 없습니다.</td></tr>';
                 return;
             }
 
@@ -164,18 +173,15 @@ class SalesApp {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="fw-bold">${item.product_number}</td>
-                    <td>${item.product_name}</td>
-                    <td>${item.color}</td>
-                    <td>${item.year || '-'}</td>
-                    <td class="text-end">${Flowork.fmtNum(item.original_price)}</td>
-                    <td class="text-end">${Flowork.fmtNum(item.sale_price)}</td>
-                    <td class="text-center fw-bold">${item.stat_qty}</td>
+                    <td><div class="text-truncate" style="max-width: 120px;">${item.product_name}</div></td>
+                    <td><span class="badge bg-light text-dark border">${item.color}</span></td>
+                    <td class="text-center fw-bold text-primary">${item.stat_qty}</td>
                 `;
                 tr.onclick = () => this.handleResultClick(item);
                 this.dom.leftTbody.appendChild(tr);
             });
         } catch (e) {
-            this.dom.leftTbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">오류 발생</td></tr>';
+            this.dom.leftTbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">오류 발생</td></tr>';
         }
     }
 
@@ -191,7 +197,7 @@ class SalesApp {
         const title = document.getElementById('detail-modal-title');
         const tbody = document.getElementById('detail-modal-tbody');
         title.textContent = `${item.product_name} (${item.product_number})`;
-        tbody.innerHTML = '<tr><td colspan="6">로딩중...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="py-3">로딩중...</td></tr>';
         this.dom.detailModal.show();
 
         try {
@@ -205,28 +211,28 @@ class SalesApp {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${v.color}</td>
-                    <td>${v.size}</td>
-                    <td>${Flowork.fmtNum(v.original_price)}</td>
+                    <td><b>${v.size}</b></td>
+                    <td class="${v.stock <= 0 ? 'text-danger' : 'text-primary'} fw-bold">${v.stock}</td>
                     <td>${Flowork.fmtNum(v.sale_price)}</td>
-                    <td class="${v.stock <= 0 ? 'text-danger' : ''}">${v.stock}</td>
-                    <td><button class="btn btn-sm btn-primary btn-add">추가</button></td>
+                    <td><button class="btn btn-sm btn-primary btn-add py-0">추가</button></td>
                 `;
                 const addHandler = () => {
                     this.addToCart({ ...item, ...v, quantity: 1 });
                     this.dom.detailModal.hide();
+                    this.switchMobileTab('sales-right'); 
                 };
                 tr.querySelector('.btn-add').onclick = addHandler;
                 tr.ondblclick = addHandler;
                 tbody.appendChild(tr);
             });
-        } catch (e) { tbody.innerHTML = '<tr><td colspan="6">오류 발생</td></tr>'; }
+        } catch (e) { tbody.innerHTML = '<tr><td colspan="5" class="text-danger">오류 발생</td></tr>'; }
     }
 
     async showRefundRecords(item) {
         const title = document.getElementById('records-modal-title');
         const tbody = document.getElementById('records-modal-tbody');
-        title.textContent = `판매 기록: ${item.product_number} (${item.color})`;
-        tbody.innerHTML = '<tr><td colspan="8">조회중...</td></tr>';
+        title.textContent = `${item.product_name} (${item.color})`;
+        tbody.innerHTML = '<tr><td colspan="5" class="py-3">조회중...</td></tr>';
         this.dom.recordsModal.show();
 
         try {
@@ -239,7 +245,7 @@ class SalesApp {
 
             tbody.innerHTML = '';
             if (data.records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8">기록 없음</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="py-3">기록 없음</td></tr>';
                 return;
             }
 
@@ -247,22 +253,20 @@ class SalesApp {
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
                 tr.innerHTML = `
-                    <td>${rec.sale_date}</td>
-                    <td>${rec.receipt_number}</td>
+                    <td>${rec.sale_date.substring(5)}</td>
+                    <td>${rec.receipt_number.split(' ')[1]}</td>
                     <td>${rec.product_number}</td>
-                    <td>${rec.product_name}</td>
-                    <td>${rec.color}</td>
                     <td>${rec.size}</td>
-                    <td>${rec.quantity}</td>
                     <td class="text-end">${Flowork.fmtNum(rec.total_amount)}</td>
                 `;
                 tr.onclick = async () => {
                     await this.loadRefundCart(rec.sale_id, rec.receipt_number);
                     this.dom.recordsModal.hide();
+                    this.switchMobileTab('sales-right');
                 };
                 tbody.appendChild(tr);
             });
-        } catch (e) { tbody.innerHTML = '<tr><td colspan="8">오류 발생</td></tr>'; }
+        } catch (e) { tbody.innerHTML = '<tr><td colspan="5">오류 발생</td></tr>'; }
     }
 
     async loadRefundCart(saleId, receiptNumber) {
@@ -289,7 +293,7 @@ class SalesApp {
                 }));
                 this.renderCart();
             }
-        } catch (e) { alert('불러오기 실패'); }
+        } catch (e) { Flowork.toast('불러오기 실패', 'danger'); }
     }
 
     addToCart(item) {
@@ -332,22 +336,22 @@ class SalesApp {
             tr.innerHTML = `
                 <td>${idx + 1}</td>
                 <td class="text-start">
-                    <strong>${item.product_name}</strong><br>
-                    <small class="text-muted">${item.product_number}</small>
+                    <div class="fw-bold text-truncate" style="max-width:120px;">${item.product_name}</div>
+                    <div class="small text-muted">${item.product_number}</div>
                 </td>
-                <td>${item.color} / ${item.size}</td>
-                <td class="text-end text-muted text-decoration-line-through small">${Flowork.fmtNum(org)}</td>
-                <td class="text-end fw-bold">${Flowork.fmtNum(sale)}</td>
-                <td><span class="badge bg-secondary">${discountRate}%</span></td>
-                <td><input type="number" class="form-control form-control-sm cart-input disc-in" value="${item.discount_amount}" min="0" data-idx="${idx}"></td>
-                <td><input type="number" class="form-control form-control-sm cart-input qty-in" value="${item.quantity}" min="1" data-idx="${idx}"></td>
-                <td><button class="btn btn-sm btn-outline-danger btn-del" data-idx="${idx}">&times;</button></td>
+                <td>${item.color}/${item.size}</td>
+                <td class="text-end small">${Flowork.fmtNum(sale)}</td>
+                <td><input type="tel" class="cart-input disc-in" value="${item.discount_amount}" data-idx="${idx}"></td>
+                <td><input type="tel" class="cart-input qty-in" value="${item.quantity}" data-idx="${idx}"></td>
+                <td><i class="bi bi-x-circle text-danger btn-del" style="cursor:pointer;" data-idx="${idx}"></i></td>
             `;
             tbody.appendChild(tr);
         });
 
         this.dom.totalQty.textContent = Flowork.fmtNum(totalQty);
         this.dom.totalAmt.textContent = Flowork.fmtNum(totalAmt);
+        
+        if (this.dom.mobileCartBadge) this.dom.mobileCartBadge.textContent = totalQty;
 
         tbody.querySelectorAll('.qty-in').forEach(el => {
             el.onchange = (e) => {
@@ -375,22 +379,22 @@ class SalesApp {
             if (confirm('보류된 판매 목록을 복원하시겠습니까?')) {
                 this.cart = JSON.parse(this.heldCart);
                 this.heldCart = null;
-                btn.innerHTML = '<i class="bi bi-pause-circle"></i> 판매보류';
+                btn.textContent = '보류';
                 btn.classList.replace('btn-danger', 'btn-warning');
                 this.renderCart();
             }
         } else {
-            if (this.cart.length === 0) return alert('상품이 없습니다.');
+            if (this.cart.length === 0) return Flowork.toast('상품이 없습니다.', 'warning');
             this.heldCart = JSON.stringify(this.cart);
             this.cart = [];
-            btn.innerHTML = '<i class="bi bi-play-circle"></i> 보류중 (복원)';
+            btn.textContent = '복원';
             btn.classList.replace('btn-warning', 'btn-danger');
             this.renderCart();
         }
     }
 
     applyAutoDiscount() {
-        if (this.cart.length === 0) return alert('상품이 없습니다.');
+        if (this.cart.length === 0) return Flowork.toast('상품이 없습니다.', 'warning');
         const currentTotal = this.cart.reduce((sum, i) => sum + (i.sale_price * i.quantity), 0);
         
         let rule = null;
@@ -399,16 +403,16 @@ class SalesApp {
         }
 
         if (rule) {
-            alert(`${Flowork.fmtNum(rule.limit)}원 이상: ${Flowork.fmtNum(rule.discount)}원 할인 적용`);
+            Flowork.toast(`${Flowork.fmtNum(rule.limit)}원 이상: ${Flowork.fmtNum(rule.discount)}원 할인`, 'success');
             this.cart[0].discount_amount += rule.discount;
             this.renderCart();
         } else {
-            alert('적용 가능한 할인 규칙이 없습니다.');
+            Flowork.toast('적용 가능한 할인 규칙이 없습니다.', 'info');
         }
     }
 
     async submitSale() {
-        if (this.cart.length === 0) return alert('상품이 없습니다.');
+        if (this.cart.length === 0) return Flowork.toast('상품이 없습니다.', 'warning');
         if (!confirm('판매를 등록하시겠습니까?')) return;
 
         try {
@@ -425,29 +429,29 @@ class SalesApp {
 
             const res = await this.post(this.urls.submitSales, payload);
             if (res.status === 'success') {
-                alert('판매 등록 완료');
+                Flowork.toast('판매 등록 완료', 'success');
                 this.cart = []; 
                 this.renderCart();
             } else {
-                alert('오류: ' + res.message);
+                Flowork.toast(res.message, 'danger');
             }
-        } catch (e) { alert('등록 실패'); }
+        } catch (e) { Flowork.toast('등록 실패', 'danger'); }
     }
 
     async submitRefund() {
-        if (!this.refundSaleId) return alert('환불할 영수증을 선택하세요.');
+        if (!this.refundSaleId) return Flowork.toast('환불할 영수증을 선택하세요.', 'warning');
         if (!confirm('전체 환불 처리하시겠습니까?')) return;
 
         try {
             const url = this.urls.refund.replace('999999', this.refundSaleId);
             const res = await this.post(url, {});
             if (res.status === 'success') {
-                alert('환불 완료');
+                Flowork.toast('환불 완료', 'success');
                 this.resetRefund();
             } else {
-                alert(res.message);
+                Flowork.toast(res.message, 'danger');
             }
-        } catch (e) { alert('오류 발생'); }
+        } catch (e) { Flowork.toast('오류 발생', 'danger'); }
     }
 
     resetRefund() {

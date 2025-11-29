@@ -137,7 +137,7 @@ class StockApp {
                 wrapper.classList.remove('loading');
                 wrapper.classList.add('error');
                 statusText.textContent = '분석 실패';
-                alert(`[오류] ${error.message}`);
+                Flowork.toast(error.message, 'danger');
             }
         });
 
@@ -158,7 +158,7 @@ class StockApp {
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!confirm('엑셀 파일 검증 및 업로드를 시작하시겠습니까?')) return;
+            if (!confirm('엑셀 업로드를 시작하시겠습니까?')) return;
 
             const formData = new FormData(form);
             
@@ -184,10 +184,10 @@ class StockApp {
                 }
 
             } catch (error) {
-                alert(`오류: ${error.message}`);
+                Flowork.toast(error.message, 'danger');
                 if (submitButton) {
                     submitButton.disabled = false;
-                    submitButton.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> 재시도';
+                    submitButton.innerHTML = '재시도';
                 }
             }
         });
@@ -254,14 +254,14 @@ class StockApp {
                 if(data.task_id) {
                     this.pollTask(data.task_id, progressBar, progressStatus);
                 } else {
-                    alert(data.message);
+                    Flowork.toast(data.message, 'success');
                     window.location.reload();
                 }
             } else {
                 throw new Error(data.message);
             }
         } catch(e) {
-            alert(`업로드 실패: ${e.message}`);
+            Flowork.toast(e.message, 'danger');
             if(submitButton) {
                 submitButton.disabled = false;
                 submitButton.innerHTML = '재시도';
@@ -281,11 +281,11 @@ class StockApp {
                     clearInterval(interval);
                     if(task.status === 'completed') {
                         if(progressBar) { progressBar.className = 'progress-bar bg-success'; progressBar.textContent = '완료'; }
-                        alert(task.result.message);
-                        window.location.reload();
+                        Flowork.toast(task.result.message, 'success');
+                        setTimeout(() => window.location.reload(), 1500);
                     } else {
                         if(progressBar) progressBar.className = 'progress-bar bg-danger';
-                        alert(`작업 오류: ${task.message}`);
+                        Flowork.toast(`작업 오류: ${task.message}`, 'danger');
                     }
                 }
             } catch(e) { clearInterval(interval); }

@@ -4,11 +4,11 @@
 <div class="container-fluid my-4">
     
     {% if current_user.is_super_admin and brands %}
-    <div class="card mb-3 shadow-sm border-primary">
-        <div class="card-body py-2 d-flex align-items-center bg-light">
-            <label class="fw-bold text-primary me-3 mb-0"><i class="bi bi-shield-lock-fill me-1"></i>브랜드 선택 (Super Admin)</label>
-            <form method="GET" action="{{ url_for('ui.stock_overview') }}" class="d-flex">
-                <select name="brand_id" class="form-select form-select-sm me-2" onchange="this.form.submit()" style="width: 200px;">
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-body py-2 bg-light rounded d-flex align-items-center">
+            <span class="badge bg-primary me-2">Admin</span>
+            <form method="GET" action="{{ url_for('ui.stock_overview') }}" class="d-flex flex-grow-1">
+                <select name="brand_id" class="form-select form-select-sm border-0 bg-transparent fw-bold" onchange="this.form.submit()">
                     {% for brand in brands %}
                     <option value="{{ brand.id }}" {{ 'selected' if brand.id == target_brand_id else '' }}>
                         {{ brand.brand_name }}
@@ -22,25 +22,25 @@
 
     <div class="card shadow-sm h-100">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h4 class="mb-0"><i class="bi bi-grid-3x3 me-2"></i>통합 재고 현황</h4>
-            <small class="text-muted">전체 매장의 옵션별 재고 수량입니다.</small>
+            <h5 class="mb-0"><i class="bi bi-grid-3x3 me-2"></i>통합 재고</h5>
+            <small class="text-muted d-none d-md-inline">전체 매장의 옵션별 재고 현황</small>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive" style="height: calc(100vh - 200px); overflow: auto;">
-                <table class="table table-bordered table-hover text-center align-middle mb-0 table-sm text-nowrap table-striped bg-white">
-                    <thead class="table-light sticky-top" style="z-index: 10;">
+            <div class="table-responsive custom-scrollbar" style="height: calc(100vh - 200px); overflow: auto;">
+                <table class="table table-bordered table-hover text-center align-middle mb-0 table-sm text-nowrap" style="font-size: 0.85rem;">
+                    <thead class="bg-light" style="position: sticky; top: 0; z-index: 10;">
                         <tr>
-                            <th rowspan="2" style="min-width: 100px; left: 0; z-index: 11;" class="sticky-col bg-light border-end">품번</th>
-                            <th rowspan="2" style="min-width: 150px; left: 100px; z-index: 11;" class="sticky-col bg-light border-end">품명</th>
-                            <th rowspan="2" style="width: 80px;">컬러</th>
-                            <th rowspan="2" style="width: 60px;">사이즈</th>
-                            <th colspan="{{ all_stores|length }}" class="text-center bg-light">매장별 재고</th>
-                            <th rowspan="2" style="width: 80px;" class="bg-light">합계</th>
+                            <th rowspan="2" class="sticky-col border-end" style="left: 0; width: 100px; z-index: 20;">품번</th>
+                            <th rowspan="2" class="sticky-col second-col border-end" style="width: 140px; z-index: 20;">품명</th>
+                            <th rowspan="2" style="width: 60px;">컬러</th>
+                            <th rowspan="2" style="width: 50px;">사이즈</th>
+                            <th colspan="{{ all_stores|length }}" class="bg-light">매장별 재고</th>
+                            <th rowspan="2" style="width: 60px;" class="bg-light border-start">합계</th>
                         </tr>
                         <tr>
                             {% for store in all_stores %}
-                            <th style="min-width: 80px; font-size: 0.85rem;" title="{{ store.store_name }}">
-                                {{ store.store_name }}
+                            <th style="min-width: 70px;" class="fw-normal" title="{{ store.store_name }}">
+                                {{ store.store_name[:4] }}..
                             </th>
                             {% endfor %}
                         </tr>
@@ -48,8 +48,10 @@
                     <tbody>
                         {% for variant in all_variants %}
                         <tr>
-                            <td class="fw-bold sticky-col bg-white border-end" style="left: 0;">{{ variant.product.product_number }}</td>
-                            <td class="text-start text-truncate sticky-col bg-white border-end" style="max-width: 200px; left: 100px;" title="{{ variant.product.product_name }}">
+                            <td class="fw-bold sticky-col border-end text-start ps-2" style="left: 0;">
+                                {{ variant.product.product_number }}
+                            </td>
+                            <td class="text-start text-truncate sticky-col second-col border-end ps-2" style="max-width: 140px;" title="{{ variant.product.product_name }}">
                                 {{ variant.product.product_name }}
                             </td>
                             <td>{{ variant.color }}</td>
@@ -61,17 +63,17 @@
                             {% for store in all_stores %}
                                 {% set qty = v_stocks.get(store.id, 0) %}
                                 {% set row_total.value = row_total.value + qty %}
-                                <td class="{{ 'text-muted opacity-25' if qty == 0 else 'fw-bold' }}">
+                                <td class="{{ 'bg-light text-muted opacity-25' if qty == 0 else 'fw-bold' }}">
                                     {{ qty if qty != 0 else '-' }}
                                 </td>
                             {% endfor %}
                             
-                            <td class="fw-bold bg-light">{{ row_total.value }}</td>
+                            <td class="fw-bold bg-light border-start">{{ row_total.value }}</td>
                         </tr>
                         {% else %}
                         <tr>
                             <td colspan="{{ 5 + all_stores|length }}" class="p-5 text-muted">
-                                등록된 상품 또는 재고 데이터가 없습니다.
+                                데이터가 없습니다.
                             </td>
                         </tr>
                         {% endfor %}
@@ -81,16 +83,4 @@
         </div>
     </div>
 </div>
-
-<style>
-    /* 테이블 컬럼 고정 (Sticky Column) 스타일 */
-    .sticky-col {
-        position: sticky;
-        z-index: 5;
-    }
-    /* 테이블 헤더의 고정 컬럼은 더 위에 표시 */
-    thead .sticky-col {
-        z-index: 15 !important;
-    }
-</style>
 {% endblock %}

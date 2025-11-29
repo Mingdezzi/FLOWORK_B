@@ -1,25 +1,33 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container my-4">
-        
-            
-        
-        {% if current_user.is_authenticated %}
-            
-        {% endif %}
-
-        <div class="card mb-3 text-center text-danger border-danger">
-            <div class="card-body" style="min-height: 400px; padding-top: 4rem;">
-                <h1 class="display-1"><i class="bi bi-bug-fill text-danger"></i></h1>
-                <h2 class="card-title mt-3">500 - 서버 내부 오류</h2>
-                <p class="card-text text-muted">요청을 처리하는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>
-                <p class="card-text text-muted small">오류가 지속되면 관리자에게 문의하세요.</p>
-                <a href="{{ url_for('ui.home') }}" class="btn btn-primary mt-3">
-                    <i class="bi bi-house-door me-1"></i> 홈으로 돌아가기
-                </a>
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card border-0 shadow-sm p-5 border-top border-4 border-danger">
+                <div class="mb-4 text-danger">
+                    <i class="bi bi-exclamation-octagon-fill" style="font-size: 4rem;"></i>
+                </div>
+                <h2 class="fw-bold mb-3">서비스 오류가 발생했습니다</h2>
+                <p class="text-muted mb-4">
+                    일시적인 시스템 오류로 요청을 처리하지 못했습니다.<br>
+                    잠시 후 다시 시도해 주세요.
+                </p>
+                {% if error_message %}
+                <div class="alert alert-light border small text-start mb-4 overflow-auto" style="max-height: 100px;">
+                    <strong class="text-danger">Error Detail:</strong> {{ error_message }}
+                </div>
+                {% endif %}
+                <div class="d-grid gap-2 d-sm-flex justify-content-center">
+                    <a href="{{ url_for('ui.home') }}" class="btn btn-primary px-4 spa-link">
+                        <i class="bi bi-arrow-clockwise me-2"></i>새로고침
+                    </a>
+                    <a href="{{ url_for('ui.home') }}" class="btn btn-outline-secondary px-4 spa-link">
+                        홈으로 이동
+                    </a>
+                </div>
             </div>
         </div>
-        
     </div>
+</div>
 {% endblock %}

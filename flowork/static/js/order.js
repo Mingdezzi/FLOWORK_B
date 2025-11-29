@@ -3,7 +3,6 @@ class OrderApp {
         this.dom = {
             receptionToggles: document.getElementById('reception-method-toggles'),
             addressWrapper: document.getElementById('address-fields-wrapper'),
-            addressRequiredText: document.getElementById('address-required-text'),
             statusSelect: document.getElementById('order_status'),
             shippingWrapper: document.getElementById('shipping-fields-wrapper'),
             completionWrapper: document.getElementById('completion-date-wrapper'),
@@ -87,7 +86,7 @@ class OrderApp {
 
         if(this.dom.btnDeleteOrder) {
             this.dom.btnDeleteOrder.addEventListener('click', () => {
-                if(confirm('🚨 경고!\n이 주문 내역을 삭제하시겠습니까?')) this.dom.formDelete.submit();
+                if(confirm('🚨 이 주문 내역을 삭제하시겠습니까?')) this.dom.formDelete.submit();
             });
         }
 
@@ -116,7 +115,6 @@ class OrderApp {
         const isDelivery = selected && selected.value === '택배수령';
         
         this.dom.addressWrapper.style.display = isDelivery ? 'block' : 'none';
-        this.dom.addressRequiredText.style.display = isDelivery ? 'block' : 'none';
         document.getElementById('address1').required = isDelivery;
         document.getElementById('address2').required = isDelivery;
     }
@@ -136,13 +134,12 @@ class OrderApp {
     async searchProduct() {
         const query = this.dom.pnInput.value.trim();
         if(!query) {
-            this.setStatus('검색어를 입력하세요.', true);
+            Flowork.toast('검색어를 입력하세요.', 'warning');
             this.dom.resultsDiv.style.display = 'none';
             return;
         }
 
-        this.setStatus('검색 중...', false);
-        this.dom.resultsDiv.innerHTML = '<div class="list-group-item">검색 중...</div>';
+        this.dom.resultsDiv.innerHTML = '<div class="list-group-item text-muted">검색 중...</div>';
         this.dom.resultsDiv.style.display = 'block';
 
         try {
@@ -150,21 +147,24 @@ class OrderApp {
             this.dom.resultsDiv.innerHTML = '';
             
             if(data.status === 'success') {
-                this.setStatus(`${data.products.length}개 발견`, false);
+                if(data.products.length === 0) {
+                    this.dom.resultsDiv.innerHTML = '<div class="list-group-item text-muted">검색 결과 없음</div>';
+                    return;
+                }
                 data.products.forEach(p => {
-                    const html = `<button type="button" class="list-group-item list-group-item-action" data-pn="${p.product_number}">
-                        <div class="fw-bold">${p.product_name}</div>
-                        <div class="small text-muted">${p.product_number}</div>
+                    const html = `<button type="button" class="list-group-item list-group-item-action text-start p-2" data-pn="${p.product_number}">
+                        <div class="fw-bold small">${p.product_name}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">${p.product_number}</div>
                     </button>`;
                     this.dom.resultsDiv.insertAdjacentHTML('beforeend', html);
                 });
             } else {
-                this.setStatus(data.message, true);
-                this.dom.resultsDiv.innerHTML = `<div class="list-group-item text-danger">${data.message}</div>`;
+                Flowork.toast(data.message, 'danger');
+                this.dom.resultsDiv.style.display = 'none';
             }
         } catch(e) {
-            this.setStatus('오류 발생', true);
-            this.dom.resultsDiv.innerHTML = `<div class="list-group-item text-danger">오류 발생</div>`;
+            Flowork.toast('검색 오류 발생', 'danger');
+            this.dom.resultsDiv.style.display = 'none';
         }
     }
 
@@ -176,34 +176,27 @@ class OrderApp {
 
     async fetchProductOptions(pn) {
         if(!pn) return;
-        this.setStatus('옵션 조회 중...', false);
         
         try {
             const data = await Flowork.post(this.urls.lookup, { product_number: pn });
             if(data.status === 'success') {
                 this.dom.pNameInput.value = data.product_name;
                 this.dom.pnInput.value = data.product_number;
-                this.setStatus(`상품명: ${data.product_name}`, false);
                 
                 this.populateSelect(this.dom.colorSelect, data.colors, this.data.color);
                 this.populateSelect(this.dom.sizeSelect, data.sizes, this.data.size);
             } else {
-                this.setStatus(data.message, true);
+                Flowork.toast(data.message, 'warning');
             }
-        } catch(e) { this.setStatus('조회 오류', true); }
+        } catch(e) { Flowork.toast('상품 조회 오류', 'danger'); }
     }
 
     populateSelect(select, items, currentVal) {
-        select.innerHTML = `<option value="">-- 선택 --</option>`;
+        select.innerHTML = `<option value="">선택</option>`;
         items.forEach(i => {
             const selected = (i === currentVal) ? 'selected' : '';
             select.insertAdjacentHTML('beforeend', `<option value="${i}" ${selected}>${i}</option>`);
         });
-    }
-
-    setStatus(msg, isError) {
-        this.dom.statusText.textContent = msg;
-        this.dom.statusText.className = isError ? 'form-text text-danger' : 'form-text';
     }
 
     addProcessingRow() {
@@ -215,7 +208,7 @@ class OrderApp {
         if(this.dom.processingBody.querySelectorAll('tr').length > 1) {
             btn.closest('tr').remove();
         } else {
-            alert('최소 1개의 처리 내역이 필요합니다.');
+            Flowork.toast('최소 1개의 처리 내역이 필요합니다.', 'warning');
         }
     }
 
@@ -223,13 +216,18 @@ class OrderApp {
         const selected = this.dom.receptionToggles.querySelector('input:checked');
         if(selected && selected.value === '택배수령') {
             if(!document.getElementById('address1').value) {
-                e.preventDefault(); alert('주소를 입력해주세요.'); return;
+                e.preventDefault(); 
+                Flowork.toast('주소를 입력해주세요.', 'warning');
+                return;
             }
         }
         const selects = this.dom.processingBody.querySelectorAll('select[name="processing_source"]');
         for(let s of selects) {
             if(!s.value) {
-                e.preventDefault(); alert('주문처를 선택해주세요.'); s.focus(); return;
+                e.preventDefault(); 
+                Flowork.toast('주문처를 선택해주세요.', 'warning');
+                s.focus(); 
+                return;
             }
         }
     }

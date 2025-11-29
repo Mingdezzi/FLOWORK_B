@@ -9,19 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateStatusUrl = document.body.dataset.updateStatusUrl;
         
         const targetButton = e.target.closest('.status-btn');
-        
-        if (!targetButton || targetButton.classList.contains('active')) {
-            return;
-        }
+        if (!targetButton) return;
 
         const orderId = targetButton.dataset.orderId;
         const newStatus = targetButton.dataset.newStatus;
         
-        if (!orderId || !newStatus || !updateStatusUrl) {
-            return;
-        }
+        if (!orderId || !newStatus || !updateStatusUrl) return;
 
-        if (confirm(`주문(ID: ${orderId})의 상태를 [${newStatus}](으)로 변경하시겠습니까?`)) {
+        if (confirm(`상태를 [${newStatus}](으)로 변경하시겠습니까?`)) {
             try {
                 const response = await fetch(updateStatusUrl, {
                     method: 'POST',
@@ -38,14 +33,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
 
                 if (response.ok && data.status === 'success') {
-                    alert('상태가 변경되었습니다.');
-                    window.location.reload(); 
+                    Flowork.toast('상태가 변경되었습니다.', 'success');
+                    setTimeout(() => window.location.reload(), 1000); 
                 } else {
-                    throw new Error(data.message || '상태 변경에 실패했습니다.');
+                    Flowork.toast(data.message || '실패했습니다.', 'danger');
                 }
             } catch (error) {
                 console.error('Order status update error:', error);
-                alert(`오류: ${error.message}`);
+                Flowork.toast('오류 발생', 'danger');
             }
         }
     });

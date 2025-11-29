@@ -7,15 +7,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.body.addEventListener('click', async (e) => {
             if (e.target.classList.contains('btn-ship')) {
-                if (!confirm('출고 확정하시겠습니까?\n(확정 시 내 매장 재고가 차감됩니다.)')) return;
+                if (!confirm('출고 확정하시겠습니까? (재고 차감)')) return;
                 await updateStatus(e.target.dataset.id, 'ship');
             }
             if (e.target.classList.contains('btn-reject')) {
-                if (!confirm('요청을 거부하시겠습니까?')) return;
+                if (!confirm('거부하시겠습니까?')) return;
                 await updateStatus(e.target.dataset.id, 'reject');
             }
             if (e.target.classList.contains('btn-receive')) {
-                if (!confirm('물품을 수령하셨습니까?\n(확정 시 내 매장 재고가 증가합니다.)')) return;
+                if (!confirm('입고 확정하시겠습니까? (재고 증가)')) return;
                 await updateStatus(e.target.dataset.id, 'receive');
             }
         });
@@ -29,13 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             if (data.status === 'success') {
-                alert(data.message);
-                window.location.reload();
+                Flowork.toast(data.message, 'success');
+                setTimeout(() => window.location.reload(), 1000);
             } else {
-                alert(data.message);
+                Flowork.toast(data.message, 'danger');
             }
         } catch (err) {
-            alert('서버 통신 오류');
+            Flowork.toast('서버 통신 오류', 'danger');
         }
     }
 
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const item = document.createElement('button');
                     item.className = 'list-group-item list-group-item-action';
                     item.textContent = `${p.product_name} (${p.product_number})`;
-                    item.onclick = () => selectProduct(p.product_number);
+                    item.onclick = (e) => { e.preventDefault(); selectProduct(p.product_number); };
                     searchResults.appendChild(item);
                 });
             } else {
@@ -82,13 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function selectProduct(pn) {
         searchResults.style.display = 'none';
         reqPnInput.value = pn;
-        
-        const url = document.body.dataset.productLookupUrl;
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-            body: JSON.stringify({ product_number: pn })
-        });
         
         const detailRes = await fetch('/api/sales/search_products', {
             method: 'POST',
@@ -139,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const qty = document.getElementById('req-qty').value;
             
             if(!sourceId || !selectedVariantId || !qty) {
-                alert('모든 항목을 입력하세요.'); return;
+                Flowork.toast('모든 항목을 입력하세요.', 'warning'); return;
             }
             
             try {
@@ -154,12 +147,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await res.json();
                 if(data.status === 'success') {
-                    alert('요청되었습니다.');
-                    window.location.reload();
+                    Flowork.toast('요청되었습니다.', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
                 } else {
-                    alert(data.message);
+                    Flowork.toast(data.message, 'danger');
                 }
-            } catch(e) { alert('오류 발생'); }
+            } catch(e) { Flowork.toast('오류 발생', 'danger'); }
         };
     }
 });

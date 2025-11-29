@@ -28,16 +28,16 @@ document.addEventListener('DOMContentLoaded', () => {
             searchResults.innerHTML = '';
             searchResults.style.display = 'block';
             
-            if(data.products) {
+            if(data.products && data.products.length > 0) {
                 data.products.forEach(p => {
                     const item = document.createElement('button');
-                    item.className = 'list-group-item list-group-item-action';
-                    item.textContent = `${p.product_name} (${p.product_number})`;
+                    item.className = 'list-group-item list-group-item-action text-start';
+                    item.innerHTML = `<span class="fw-bold">${p.product_name}</span> <span class="text-muted small">(${p.product_number})</span>`;
                     item.onclick = (e) => { e.preventDefault(); selectProduct(p.product_number); };
                     searchResults.appendChild(item);
                 });
             } else {
-                searchResults.innerHTML = '<div class="p-2">검색 결과 없음</div>';
+                searchResults.innerHTML = '<div class="p-2 text-muted">검색 결과 없음</div>';
             }
         };
     }
@@ -84,26 +84,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSubmit = document.getElementById('btn-submit-order') || document.getElementById('btn-submit-return');
     if (btnSubmit) {
         btnSubmit.onclick = async () => {
-            if (!selectedVariantId) { alert('상품을 선택하세요.'); return; }
+            if (!selectedVariantId) { Flowork.toast('상품 및 옵션을 선택하세요.', 'warning'); return; }
             const qty = document.getElementById('req-qty').value;
             const url = document.body.dataset.apiCreate;
 
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({
-                    variant_id: selectedVariantId,
-                    quantity: qty,
-                    date: dateInput.value
-                })
-            });
-            const data = await res.json();
-            if (data.status === 'success') {
-                alert(data.message);
-                window.location.reload();
-            } else {
-                alert(data.message);
-            }
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({
+                        variant_id: selectedVariantId,
+                        quantity: qty,
+                        date: dateInput.value
+                    })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    Flowork.toast(data.message, 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    Flowork.toast(data.message, 'danger');
+                }
+            } catch(e) { Flowork.toast('서버 통신 오류', 'danger'); }
         };
     }
 
@@ -140,11 +142,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             if (data.status === 'success') {
-                alert(data.message);
-                window.location.reload();
+                Flowork.toast('처리되었습니다.', 'success');
+                setTimeout(() => window.location.reload(), 1000);
             } else {
-                alert(data.message);
+                Flowork.toast(data.message, 'danger');
             }
-        } catch(e) { alert('통신 오류'); }
+        } catch(e) { Flowork.toast('통신 오류', 'danger'); }
     }
 });

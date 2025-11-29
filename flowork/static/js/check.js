@@ -4,8 +4,7 @@ class CheckApp {
             barcodeInput: document.getElementById('barcode-input'),
             toggleBtn: document.getElementById('toggle-scan-btn'),
             scanTableBody: document.getElementById('scan-table-body'),
-            scanStatusAlert: document.getElementById('scan-status-alert'),
-            scanStatusMessage: document.getElementById('scan-status-message'),
+            scanStatusMsg: document.getElementById('scan-status-msg'),
             scanTotalStatus: document.getElementById('scan-total-status'),
             clearBtn: document.getElementById('clear-scan-btn'),
             submitBtn: document.getElementById('submit-scan-btn'),
@@ -23,8 +22,7 @@ class CheckApp {
         this.state = {
             isScanning: false,
             scanList: {},
-            targetStoreId: this.dom.targetStoreSelect ? this.dom.targetStoreSelect.value : null,
-            alertTimeout: null
+            targetStoreId: this.dom.targetStoreSelect ? this.dom.targetStoreSelect.value : null
         };
 
         this.init();
@@ -44,8 +42,6 @@ class CheckApp {
             });
             this.updateUiForStore(this.state.targetStoreId);
         }
-
-        if (this.dom.scanStatusAlert) this.dom.scanStatusAlert.style.display = 'none';
 
         if (this.dom.toggleBtn) {
             this.dom.toggleBtn.addEventListener('click', () => this.toggleScanning());
@@ -76,7 +72,7 @@ class CheckApp {
             this.dom.resetForm.addEventListener('submit', (e) => {
                 if (this.dom.targetStoreSelect && !this.dom.resetHiddenInput.value) {
                     e.preventDefault();
-                    alert('초기화할 매장을 선택해주세요.');
+                    Flowork.toast('초기화할 매장을 선택해주세요.', 'warning');
                 }
             });
         }
@@ -89,7 +85,7 @@ class CheckApp {
                 if (storeId) url.searchParams.set('target_store_id', storeId);
                 else url.searchParams.delete('target_store_id');
                 this.dom.exportBtn.setAttribute('href', url.pathname + url.search);
-            } catch (e) { console.error("URL parsing error", e); }
+            } catch (e) { console.error(e); }
         }
         
         if (this.dom.resetHiddenInput) {
@@ -99,7 +95,7 @@ class CheckApp {
 
     toggleScanning() {
         if (this.dom.targetStoreSelect && !this.state.targetStoreId) {
-            alert('작업할 매장을 먼저 선택해주세요.');
+            Flowork.toast('작업할 매장을 먼저 선택해주세요.', 'warning');
             this.dom.targetStoreSelect.focus();
             return;
         }
@@ -110,20 +106,22 @@ class CheckApp {
 
         if (this.state.isScanning) {
             btn.classList.replace('btn-success', 'btn-danger');
-            btn.innerHTML = '<i class="bi bi-power me-1"></i> 리딩 OFF';
+            btn.innerHTML = '<i class="bi bi-stop-circle me-1"></i>종료';
             input.disabled = false;
-            input.placeholder = "바코드를 스캔하세요...";
             input.focus();
+            this.setStatus('스캔 대기 중...', 'text-primary');
         } else {
             btn.classList.replace('btn-danger', 'btn-success');
-            btn.innerHTML = '<i class="bi bi-power me-1"></i> 리딩 ON';
+            btn.innerHTML = '<i class="bi bi-barcode me-1"></i>리딩 시작';
             input.disabled = true;
-            input.placeholder = "리딩 OFF 상태...";
             input.value = '';
+            this.setStatus('대기 중...', 'text-muted');
         }
     }
 
     async processBarcode(barcode) {
+        this.setStatus('조회 중...', 'text-warning');
+        
         try {
             const response = await fetch(this.urls.fetch, {
                 method: 'POST',
@@ -141,13 +139,16 @@ class CheckApp {
 
             if (response.ok && data.status === 'success') {
                 this.addToList(data);
-                this.showStatus(`스캔 성공: ${data.product_name} (${data.color}/${data.size})`, 'success');
+                this.setStatus(`스캔 완료: ${data.product_name}`, 'text-success');
+                if(window.playBeep) window.playBeep('success');
             } else {
-                this.showStatus(`오류: ${data.message}`, 'danger');
+                this.setStatus(`오류: ${data.message}`, 'text-danger');
+                if(window.playBeep) window.playBeep('error');
             }
         } catch (error) {
             console.error('Error:', error);
-            this.showStatus('서버 통신 오류 발생', 'danger');
+            this.setStatus('서버 통신 오류', 'text-danger');
+            if(window.playBeep) window.playBeep('error');
         }
     }
 
@@ -172,27 +173,22 @@ class CheckApp {
             const tr = document.createElement('tr');
             
             const diff = item.scan_quantity - item.store_stock;
-            let diffClass = 'text-success';
-            let diffText = '0 (일치)';
+            let diffClass = 'text-muted';
+            let diffText = '0';
             
-            if (diff > 0) {
-                diffClass = 'text-primary fw-bold';
-                diffText = `+${diff}`;
-            } else if (diff < 0) {
-                diffClass = 'text-danger fw-bold';
-            }
+            if (diff > 0) { diffClass = 'text-primary fw-bold'; diffText = `+${diff}`; } 
+            else if (diff < 0) { diffClass = 'text-danger fw-bold'; diffText = `${diff}`; }
 
             tr.innerHTML = `
-                <td>
-                    <div class="fw-bold">${item.product_name}</div>
+                <td class="text-start ps-3">
+                    <div class="fw-bold text-truncate" style="max-width: 140px;">${item.product_name}</div>
                     <div class="small text-muted">${item.product_number}</div>
                 </td>
-                <td>${item.color}</td>
-                <td>${item.size}</td>
-                <td>${item.store_stock}</td>
+                <td>${item.color}/${item.size}</td>
+                <td class="text-muted">${item.store_stock}</td>
                 <td>
-                    <input type="number" class="form-control form-control-sm qty-input" 
-                           style="width: 70px;" 
+                    <input type="tel" class="form-control form-control-sm text-center mx-auto" 
+                           style="width: 50px;" 
                            data-barcode="${item.barcode}" 
                            value="${item.scan_quantity}" min="0">
                 </td>
@@ -204,9 +200,9 @@ class CheckApp {
             totalQty += item.scan_quantity;
         });
 
-        this.dom.scanTotalStatus.innerHTML = `총 <strong>${totalItems}</strong> 개 품목 (<strong>${totalQty}</strong>개)`;
+        this.dom.scanTotalStatus.textContent = `총 ${totalQty}개 (${totalItems}종)`;
         
-        this.dom.scanTableBody.querySelectorAll('.qty-input').forEach(input => {
+        this.dom.scanTableBody.querySelectorAll('input').forEach(input => {
             input.addEventListener('change', (e) => {
                 const bc = e.target.dataset.barcode;
                 const newQty = parseInt(e.target.value);
@@ -221,16 +217,16 @@ class CheckApp {
     clearScanList() {
         this.state.scanList = {};
         this.renderTable();
-        this.showStatus('목록이 초기화되었습니다.', 'info');
+        this.setStatus('초기화됨', 'text-info');
         this.dom.barcodeInput.focus();
     }
 
     async submitScan() {
         const items = Object.values(this.state.scanList);
-        if (items.length === 0) return alert('저장할 스캔 내역이 없습니다.');
-        if (this.dom.targetStoreSelect && !this.state.targetStoreId) return alert('작업할 매장이 선택되지 않았습니다.');
+        if (items.length === 0) return Flowork.toast('스캔 내역이 없습니다.', 'warning');
+        if (this.dom.targetStoreSelect && !this.state.targetStoreId) return Flowork.toast('매장을 선택하세요.', 'warning');
 
-        if (!confirm(`총 ${items.length}개 품목의 실사 재고를 반영하시겠습니까?\n(기존 실사 재고를 덮어씁니다)`)) return;
+        if (!confirm(`총 ${items.length}종의 실사 재고를 반영하시겠습니까?`)) return;
 
         try {
             const payload = {
@@ -253,28 +249,22 @@ class CheckApp {
             const result = await response.json();
 
             if (response.ok && result.status === 'success') {
-                alert(result.message);
+                Flowork.toast('실사 재고가 반영되었습니다.', 'success');
                 this.state.scanList = {};
                 this.renderTable();
             } else {
-                alert(`저장 실패: ${result.message}`);
+                Flowork.toast(`저장 실패: ${result.message}`, 'danger');
             }
 
         } catch (error) {
-            console.error('Save Error:', error);
-            alert('서버 통신 중 오류가 발생했습니다.');
+            console.error(error);
+            Flowork.toast('서버 통신 오류', 'danger');
         }
     }
 
-    showStatus(msg, type) {
-        this.dom.scanStatusMessage.textContent = msg;
-        this.dom.scanStatusAlert.className = `alert alert-${type} alert-dismissible fade show`;
-        this.dom.scanStatusAlert.style.display = 'block';
-        
-        if (this.state.alertTimeout) clearTimeout(this.state.alertTimeout);
-        this.state.alertTimeout = setTimeout(() => {
-            if(this.dom.scanStatusAlert) this.dom.scanStatusAlert.style.display = 'none';
-        }, 3000);
+    setStatus(msg, cls) {
+        this.dom.scanStatusMsg.textContent = msg;
+        this.dom.scanStatusMsg.className = cls;
     }
 }
 

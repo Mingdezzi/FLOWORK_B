@@ -1,15 +1,3 @@
-// 전역 함수 유지 (이미지 에러 처리는 인라인에서 호출됨)
-function imgFallback(img) {
-    const src = img.src;
-    if (src.includes('_DF_01.jpg')) {
-        img.src = src.replace('_DF_01.jpg', '_DM_01.jpg');
-    } else if (src.includes('_DM_01.jpg')) {
-        img.src = src.replace('_DM_01.jpg', '_DG_01.jpg');
-    } else {
-        img.style.visibility = 'hidden';
-    }
-}
-
 class SearchApp {
     constructor() {
         this.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -147,7 +135,7 @@ class SearchApp {
         } else if (dataKey === 'shift-kor') {
             this.toggleShift();
         } else if (dataKey === 'shift-eng') {
-            // 영문 쉬프트 (추후 구현)
+            
         } else if (dataKey === ' ') {
             input.value += ' ';
             this.triggerSearch();
@@ -249,10 +237,10 @@ class SearchApp {
 
     renderResults(products, showingFavorites, selectedCategory) {
         if (showingFavorites) {
-            this.dom.productListHeader.innerHTML = '<i class="bi bi-star-fill me-2 text-warning"></i>즐겨찾기 목록';
+            this.dom.productListHeader.innerHTML = '<i class="bi bi-star-fill me-2 text-warning"></i>즐겨찾기';
         } else {
             const badge = (selectedCategory && selectedCategory !== '전체') ? `<span class="badge bg-success ms-2">${selectedCategory}</span>` : '';
-            this.dom.productListHeader.innerHTML = `<i class="bi bi-card-list me-2"></i>상품 검색 결과 ${badge}`;
+            this.dom.productListHeader.innerHTML = `<i class="bi bi-card-list me-2"></i>검색 결과 ${badge}`;
         }
         
         this.dom.productListUl.innerHTML = '';

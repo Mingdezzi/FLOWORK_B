@@ -71,7 +71,7 @@ class DetailApp {
     setupEditMode() {
         if (this.dom.editProductBtn) {
             this.dom.editProductBtn.addEventListener('click', () => {
-                if (confirm('✏️ 상품 정보 수정 모드로 전환합니다.\n수정 후에는 반드시 [수정 완료] 버튼을 눌러 저장해주세요.')) {
+                if (confirm('상품 정보 수정 모드로 전환합니다.')) {
                     document.body.classList.add('edit-mode');
                     const currentStoreId = this.dom.storeSelector ? (parseInt(this.dom.storeSelector.value, 10) || 0) : this.config.myStoreID;
                     this.renderStockTable(currentStoreId);
@@ -81,7 +81,7 @@ class DetailApp {
 
         if (this.dom.cancelEditBtn) {
             this.dom.cancelEditBtn.addEventListener('click', () => {
-                if (confirm('⚠️ 수정 중인 내용을 취소하고 원래 상태로 되돌립니다.\n계속하시겠습니까?')) {
+                if (confirm('수정을 취소하시겠습니까?')) {
                     document.body.classList.remove('edit-mode');
                     const currentStoreId = this.dom.storeSelector ? (parseInt(this.dom.storeSelector.value, 10) || 0) : this.config.myStoreID;
                     this.renderStockTable(currentStoreId);
@@ -96,11 +96,10 @@ class DetailApp {
 
     setupDeleteProduct() {
         if (this.dom.deleteProductBtn && this.dom.deleteProductForm) {
-            const productName = document.querySelector('.product-details h2')?.textContent || '이 상품';
             this.dom.deleteProductBtn.addEventListener('click', () => {
-                if (confirm(`🚨🚨🚨 최종 경고 🚨🚨🚨\n\n'${productName}' 상품을(를) DB에서 완전히 삭제합니다.\n\n연결된 모든 옵션, 재고 데이터가 영구적으로 삭제됩니다.\n\n정말로 삭제하시겠습니까?`)) {
+                if (confirm('🚨 이 상품을 영구 삭제하시겠습니까?')) {
                     this.dom.deleteProductBtn.disabled = true;
-                    this.dom.deleteProductBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 삭제 중...';
+                    this.dom.deleteProductBtn.innerHTML = '삭제 중...';
                     this.dom.deleteProductForm.submit();
                 }
             });
@@ -109,7 +108,7 @@ class DetailApp {
 
     renderStockTable(selectedStoreId) {
         if (!this.dom.variantsTbody || !this.dom.rowTemplate || !window.allVariants || !window.hqStockData) {
-            if(this.dom.variantsTbody) this.dom.variantsTbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger p-4">데이터 로드 실패</td></tr>';
+            if(this.dom.variantsTbody) this.dom.variantsTbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">데이터 로드 실패</td></tr>';
             return;
         }
 
@@ -134,7 +133,7 @@ class DetailApp {
             let diffClass = 'bg-light text-dark';
             if (actualQty !== null && actualQty !== undefined) {
                 const diff = storeQty - actualQty;
-                diffVal = diff;
+                diffVal = diff > 0 ? `+${diff}` : diff;
                 if (diff > 0) diffClass = 'bg-primary';
                 else if (diff < 0) diffClass = 'bg-danger';
                 else diffClass = 'bg-secondary';
@@ -146,9 +145,8 @@ class DetailApp {
                 .replace(/__COLOR__/g, variant.color || '')
                 .replace(/__SIZE__/g, variant.size || '')
                 .replace(/__STORE_QTY__/g, storeQty)
-                .replace(/__STORE_QTY_CLASS__/g, storeQty === 0 ? 'text-danger' : '')
+                .replace(/__STORE_QTY_CLASS__/g, storeQty === 0 ? 'text-danger' : 'text-primary')
                 .replace(/__HQ_QTY__/g, variant.hq_quantity || 0)
-                .replace(/__HQ_QTY_CLASS__/g, (variant.hq_quantity || 0) === 0 ? 'text-danger' : 'text-muted')
                 .replace(/__ACTUAL_QTY_VAL__/g, (actualQty !== null && actualQty !== undefined) ? actualQty : '')
                 .replace(/__DIFF_VAL__/g, diffVal)
                 .replace(/__DIFF_CLASS__/g, diffClass)
@@ -159,7 +157,7 @@ class DetailApp {
         });
         
         if (window.allVariants.length === 0) {
-             this.dom.variantsTbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted p-4">옵션 정보가 없습니다.</td></tr>';
+             this.dom.variantsTbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">옵션이 없습니다.</td></tr>';
         }
 
         if (document.body.classList.contains('edit-mode') && this.dom.addRowTemplate) {
@@ -177,15 +175,13 @@ class DetailApp {
             const currentSelectedStoreId = this.dom.storeSelector ? (parseInt(this.dom.storeSelector.value, 10) || 0) : this.config.myStoreID;
             
             if (currentSelectedStoreId !== this.config.myStoreID) {
-                alert('재고 수정은 \'내 매장\'이 선택된 경우에만 가능합니다.');
+                Flowork.toast('내 매장의 재고만 수정할 수 있습니다.', 'warning');
                 return;
             }
             
-            if (confirm(`재고를 ${Math.abs(change)}개 ${change > 0 ? "증가" : "감소"}시키겠습니까?`)) {
-                const allButtons = stockButton.closest('.button-stack').querySelectorAll('button');
-                allButtons.forEach(btn => btn.disabled = true);
-                this.updateStockOnServer(barcode, change, allButtons);
-            }
+            const allButtons = stockButton.closest('.stock-stepper').querySelectorAll('button');
+            allButtons.forEach(btn => btn.disabled = true);
+            this.updateStockOnServer(barcode, change, allButtons);
         }
 
         const saveButton = e.target.closest('button.btn-save-actual');
@@ -201,7 +197,7 @@ class DetailApp {
 
         const deleteBtn = e.target.closest('.btn-delete-variant');
         if (deleteBtn) {
-            if (confirm('🗑️ 이 행을 삭제하시겠습니까? [수정 완료]를 눌러야 최종 반영됩니다.')) {
+            if (confirm('이 옵션을 삭제하시겠습니까?')) {
                 const row = e.target.closest('tr');
                 if (row.dataset.variantId) {
                     row.style.display = 'none';
@@ -252,12 +248,10 @@ class DetailApp {
 
     handleFavorite(e) {
         const button = e.target.closest('button');
-        const isFavorite = button.classList.contains('btn-warning');
-        const actionText = isFavorite ? '즐겨찾기에서 해제' : '즐겨찾기에 추가';
-        if (confirm(`⭐ 이 상품을 ${actionText}하시겠습니까?`)) {
-           button.disabled = true;
-           this.toggleFavoriteOnServer(this.config.currentProductID, button);
-        }
+        const isFavorite = button.classList.contains('text-warning');
+        
+        button.disabled = true;
+        this.toggleFavoriteOnServer(this.config.currentProductID, button);
     }
 
     toggleActualStockMode(forceState) {
@@ -273,12 +267,15 @@ class DetailApp {
              const firstInput = this.dom.variantsTbody.querySelector('.actual-stock-input');
              if (firstInput) firstInput.focus();
          } else {
-             this.dom.toggleActualStockBtn.innerHTML = '<i class="bi bi-pencil-square me-1"></i> 실사재고 등록';
+             this.dom.toggleActualStockBtn.innerHTML = '<i class="bi bi-pencil-square me-1"></i> 실사 입력';
              this.dom.toggleActualStockBtn.classList.replace('btn-success', 'btn-secondary');
          }
     }
     
     updateActualStockInputsState() {
+         const actualCells = this.dom.variantsTbody.querySelectorAll('.actual-stock-cell');
+         actualCells.forEach(cell => { cell.style.display = this.state.isActualStockEnabled ? 'table-cell' : 'none'; });
+         
          const actualStockInputs = this.dom.variantsTbody.querySelectorAll('.actual-stock-input');
          const saveActualStockBtns = this.dom.variantsTbody.querySelectorAll('.btn-save-actual');
          
@@ -293,22 +290,22 @@ class DetailApp {
          const color = newColorInput.value.trim();
          const size = newSizeInput.value.trim();
 
-         if (!color || !size) return alert('컬러와 사이즈를 입력해주세요.');
+         if (!color || !size) return Flowork.toast('컬러와 사이즈를 입력해주세요.', 'warning');
 
          const newRow = document.createElement('tr');
          newRow.dataset.action = 'add'; 
          newRow.innerHTML = `
-             <td class="variant-edit-cell"><input type="text" class="form-control form-control-sm variant-edit-input" data-field="color" value="${color}"></td>
-             <td class="variant-edit-cell"><input type="text" class="form-control form-control-sm variant-edit-input" data-field="size" value="${size}"></td>
-             <td></td><td></td><td class="view-field"></td><td class="view-field"></td>
-             <td class="edit-field"><button class="btn btn-danger btn-sm btn-delete-variant"><i class="bi bi-trash-fill"></i></button></td>
+             <td class="variant-edit-cell"><input type="text" class="form-control form-control-sm" data-field="color" value="${color}"></td>
+             <td class="variant-edit-cell"><input type="text" class="form-control form-control-sm" data-field="size" value="${size}"></td>
+             <td colspan="3" class="text-center text-muted">저장 후 표시됨</td>
+             <td class="edit-field"><button class="btn btn-outline-danger btn-sm btn-delete-variant"><i class="bi bi-trash"></i></button></td>
          `;
          this.dom.variantsTbody.insertBefore(newRow, addVariantRow);
          newColorInput.value = ''; newSizeInput.value = ''; newColorInput.focus();
     }
 
     async saveProductDetails() {
-        if (!confirm('💾 수정된 상품 정보를 저장하시겠습니까?')) return;
+        if (!confirm('수정된 상품 정보를 저장하시겠습니까?')) return;
 
         const productData = {
             product_id: this.config.currentProductID,
@@ -318,9 +315,6 @@ class DetailApp {
             variants: []
         };
         
-        const originalPrice = document.getElementById('edit-original-price-field').value;
-        const salePrice = document.getElementById('edit-sale-price-field').value;
-
         this.dom.variantsTbody.querySelectorAll('tr[data-variant-id], tr[data-action="add"]').forEach(row => {
             if (row.id === 'add-variant-row' || (row.style.display === 'none' && row.dataset.action !== 'delete')) return;
             
@@ -333,32 +327,30 @@ class DetailApp {
                  const variant = {
                     variant_id: variantID, action: action,
                     color: row.querySelector('[data-field="color"]').value,
-                    size: row.querySelector('[data-field="size"]').value,
-                    original_price: originalPrice, sale_price: salePrice
+                    size: row.querySelector('[data-field="size"]').value
                 };
-                if (action === 'add' && (!variant.color || !variant.size)) return;
                 productData.variants.push(variant);
             }
         });
 
         this.dom.saveProductBtn.disabled = true;
-        this.dom.saveProductBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 저장 중...';
+        this.dom.saveProductBtn.innerHTML = '저장 중...';
 
         try {
             await Flowork.post(this.config.updateProductDetailsUrl, productData);
-            alert('저장되었습니다.');
+            Flowork.toast('저장되었습니다.', 'success');
             window.location.reload();
         } catch (error) {
-            alert(`오류: ${error.message}`);
+            Flowork.toast(`오류: ${error.message}`, 'danger');
             this.dom.saveProductBtn.disabled = false;
-            this.dom.saveProductBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> 수정 완료';
+            this.dom.saveProductBtn.innerHTML = '저장';
         }
     }
 
     saveActualStockHandler(saveButton, inputElement, barcode) {
         const val = inputElement.value;
         if (val !== '' && (isNaN(val) || parseInt(val) < 0)) {
-            alert('0 이상의 숫자만 입력 가능합니다.');
+            Flowork.toast('숫자만 입력 가능합니다.', 'warning');
             inputElement.focus(); inputElement.select(); return;
         }
         saveButton.disabled = true;
@@ -368,25 +360,28 @@ class DetailApp {
     async updateStockOnServer(barcode, change, buttons) {
         try {
             const data = await Flowork.post(this.config.updateStockUrl, { barcode: barcode, change: change });
-            const quantitySpan = document.getElementById(`stock-${data.barcode}`);
-            quantitySpan.textContent = data.new_quantity;
-            quantitySpan.classList.toggle('text-danger', data.new_quantity === 0);
-            this.updateStockDiffDisplayDirectly(barcode, data.new_stock_diff);
-        } catch(error) { alert(`오류: ${error.message}`); } 
+            const quantityDiv = document.getElementById(`stock-${data.barcode}`);
+            quantityDiv.textContent = data.new_quantity;
+            quantityDiv.classList.toggle('text-danger', data.new_quantity === 0);
+            quantityDiv.classList.toggle('text-primary', data.new_quantity > 0);
+        } catch(error) { Flowork.toast(error.message, 'danger'); } 
         finally { buttons.forEach(btn => btn.disabled = false); }
     }
 
     async toggleFavoriteOnServer(productID, button) {
         try {
             const data = await Flowork.post(this.config.toggleFavoriteUrl, { product_id: productID });
+            const icon = button.querySelector('i');
             if (data.new_favorite_status === 1) {
-                button.innerHTML = '<i class="bi bi-star-fill me-1"></i> 즐겨찾기 해제';
-                button.classList.replace('btn-outline-secondary', 'btn-warning');
+                icon.className = 'bi bi-star-fill';
+                button.classList.replace('text-secondary', 'text-warning');
+                Flowork.toast('즐겨찾기에 추가되었습니다.', 'success');
             } else {
-                button.innerHTML = '<i class="bi bi-star me-1"></i> 즐겨찾기 추가';
-                button.classList.replace('btn-warning', 'btn-outline-secondary');
+                icon.className = 'bi bi-star';
+                button.classList.replace('text-warning', 'text-secondary');
+                Flowork.toast('즐겨찾기가 해제되었습니다.', 'info');
             }
-        } catch(error) { alert(`오류: ${error.message}`); } 
+        } catch(error) { Flowork.toast(error.message, 'danger'); } 
         finally { button.disabled = false; }
     }
 
@@ -402,7 +397,7 @@ class DetailApp {
             const nextInput = inputs[inputs.indexOf(inputElement) + 1];
             if (nextInput && this.state.isActualStockEnabled) { nextInput.focus(); nextInput.select(); }
         } catch (error) {
-            alert(`오류: ${error.message}`);
+            Flowork.toast(error.message, 'danger');
             saveButton.disabled = false;
             inputElement.disabled = !this.state.isActualStockEnabled;
         }
@@ -411,8 +406,8 @@ class DetailApp {
     updateStockDiffDisplayDirectly(barcode, stockDiffValue) {
         const diffSpan = document.getElementById(`diff-${barcode}`);
         if (diffSpan) {
-            diffSpan.textContent = stockDiffValue !== '' && stockDiffValue !== null ? stockDiffValue : '-';
-            diffSpan.className = 'stock-diff badge ';
+            diffSpan.textContent = stockDiffValue !== '' && stockDiffValue !== null ? (stockDiffValue > 0 ? `+${stockDiffValue}` : stockDiffValue) : '-';
+            diffSpan.className = 'badge ';
             if (stockDiffValue !== '' && stockDiffValue !== null) {
                 const diff = parseInt(stockDiffValue);
                 if (!isNaN(diff)) {
