@@ -281,7 +281,7 @@ body {
 
 .qwerty-key {
     flex-grow: 1;
-    height: 50px;
+    height: 55px;
     padding: 0;
     font-size: 1.1rem;
     font-weight: 500;
@@ -316,7 +316,7 @@ body {
 }
 
 .qwerty-row-bottom .keypad-btn {
-    height: 50px;
+    height: 55px;
     font-size: 1rem;
     width: 100%;
 }
