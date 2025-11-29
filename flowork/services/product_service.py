@@ -9,9 +9,8 @@ class ProductService:
     @staticmethod
     def get_product_detail_context(product_id, brand_id, my_store_id=None):
         try:
-            # 1. 상품 및 옵션/재고 로드
             product = Product.query.options(
-                selectinload(Product.variants).selectinload(Variant.stock_levels)
+                selectinload(Product.variants).selectinload(Variant.store_stocks)
             ).filter(
                 Product.id == product_id,
                 Product.brand_id == brand_id
@@ -22,7 +21,6 @@ class ProductService:
 
             product_variants_for_map = product.variants
             
-            # 2. 정렬된 변형 목록
             variants = db.session.query(Variant).filter(
                 Variant.product_id == product.id
             ).order_by(Variant.color, Variant.size).all()
@@ -37,7 +35,6 @@ class ProductService:
                 'sale_price': v.sale_price or 0
             } for v in variants]
             
-            # 3. 전체 매장 목록
             all_stores = Store.query.filter(
                 Store.brand_id == brand_id,
                 Store.is_active == True
@@ -45,18 +42,16 @@ class ProductService:
             
             store_id_set = {s.id for s in all_stores}
             
-            # 4. 재고 매트릭스 구축 (Store x Variant)
             stock_data_map = {s.id: {} for s in all_stores}
             
             for v in product_variants_for_map:
-                for stock_level in v.stock_levels:
+                for stock_level in v.store_stocks:
                     if stock_level.store_id in store_id_set:
                         stock_data_map[stock_level.store_id][v.id] = {
                             'quantity': stock_level.quantity,
                             'actual_stock': stock_level.actual_stock
                         }
             
-            # 5. 연관 상품
             related_products = []
             if product.item_category:
                 related_products = Product.query.options(selectinload(Product.variants)).filter(
@@ -104,7 +99,7 @@ class ProductService:
                 .filter(Product.brand_id == brand_id)\
                 .options(
                     joinedload(Variant.product),
-                    selectinload(Variant.stock_levels)
+                    selectinload(Variant.store_stocks)
                 )\
                 .order_by(Product.product_number, Variant.color, Variant.size)\
                 .all()
@@ -112,7 +107,7 @@ class ProductService:
             stock_matrix = {}
             for v in all_variants:
                 stock_map_for_variant = {}
-                for stock_level in v.stock_levels:
+                for stock_level in v.store_stocks:
                     if stock_level.store_id in store_id_set:
                         stock_map_for_variant[stock_level.store_id] = stock_level.quantity
                 

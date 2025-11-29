@@ -6,17 +6,14 @@ from flask import request, flash, redirect, url_for, abort, send_file, jsonify, 
 from flask_login import login_required, current_user
 from sqlalchemy import delete, text
 
-# [수정] Announcement, ScheduleEvent 제거 (시스템에서 삭제된 모델)
-from flowork.models import db, Order, OrderProcessing, Staff, Setting, User, Store, Brand, Product, Variant, StoreStock, Sale, SaleItem, StockHistory
+from flowork.models import db, Order, ProcessingStep, Staff, Setting, User, Store, Brand, Product, Variant, StoreStock, Sale, SaleItem, StockHistory
 from flowork.services.db import sync_missing_data_in_db
 from . import api_bp
 from .utils import admin_required
 
-# [신규] 서버 상태 확인용 (헬스 체크)
 @api_bp.route('/health', methods=['GET'])
 def health_check():
     try:
-        # DB 연결 확인
         db.session.execute(text('SELECT 1'))
         return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()}), 200
     except Exception as e:
@@ -183,7 +180,7 @@ def reset_orders_db():
 
     try:
         if target_store_id:
-            stmt = delete(OrderProcessing).where(OrderProcessing.order_id.in_(
+            stmt = delete(ProcessingStep).where(ProcessingStep.order_id.in_(
                 db.session.query(Order.id).filter(Order.store_id == target_store_id)
             ))
             db.session.execute(stmt)
@@ -196,7 +193,7 @@ def reset_orders_db():
             store_ids = [s[0] for s in store_ids]
             
             if store_ids:
-                stmt = delete(OrderProcessing).where(OrderProcessing.order_id.in_(
+                stmt = delete(ProcessingStep).where(ProcessingStep.order_id.in_(
                     db.session.query(Order.id).filter(Order.store_id.in_(store_ids))
                 ))
                 db.session.execute(stmt)
@@ -311,7 +308,6 @@ def reset_store_db():
         if engine is None:
             raise Exception("Default bind engine not found.")
 
-        # [수정] 삭제된 모델(ScheduleEvent) 제거
         tables_to_drop = [
             Staff.__table__,
             Setting.__table__, 

@@ -24,7 +24,7 @@ def create_app(config_class=Config):
     app.cli.add_command(init_db_command)
     app.cli.add_command(create_super_admin)
 
-    from .models import User, Store, Brand, Product, Variant, StoreStock, Sale, SaleItem, StockTransfer, StoreOrder, Setting, StockHistory, Order, ProcessingStep
+    from .models import User, Store, Brand, Product, Variant, StoreStock, Sale, SaleItem, StockTransfer, StoreOrder, Setting, StockHistory, Order, ProcessingStep, Staff, StoreReturn
 
     @login_manager.user_loader
     def load_user(user_id):
