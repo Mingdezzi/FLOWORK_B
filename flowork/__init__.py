@@ -24,8 +24,9 @@ def create_app(config_class=Config):
     app.cli.add_command(init_db_command)
     app.cli.add_command(create_super_admin)
 
-    # 모델 import (관계 설정을 위해 필요)
-    from .models import User, Store, Brand, Product, Variant, StoreStock, Sale, SaleItem, StockTransfer, StoreOrder, Setting, StockHistory
+    # 모델 import (순환 참조 방지를 위해 함수 내부에서 임포트하지만, 
+    # 이미 commands에서 모델을 로드하므로 여기선 login_manager용으로만 필요)
+    from .models import User
 
     @login_manager.user_loader
     def load_user(user_id):

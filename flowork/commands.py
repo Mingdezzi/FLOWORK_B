@@ -1,7 +1,7 @@
 import click
 from flask.cli import with_appcontext
 from .extensions import db
-# 모든 모델을 임포트하여 SQLAlchemy가 테이블을 인식하도록 함
+# 모델들을 임포트해야 create_all()이 테이블을 인식할 수 있습니다.
 from .models import User, Brand, Store, Product, Variant, StoreStock, Sale, SaleItem, StockTransfer, StoreOrder, Setting, StockHistory
 
 @click.command('init-db')
@@ -9,7 +9,7 @@ from .models import User, Brand, Store, Product, Variant, StoreStock, Sale, Sale
 def init_db_command():
     """기존 데이터를 삭제하고 새로운 테이블을 생성합니다."""
     try:
-        # 안전을 위해 기존 테이블 삭제 후 재생성
+        # 기존 테이블 모두 삭제 후 재생성 (초기화)
         db.drop_all()
         db.create_all()
         click.echo('Initialized the database.')
