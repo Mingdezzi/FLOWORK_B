@@ -54,6 +54,7 @@ class SearchApp {
     }
 
     checkMobileMode() {
+        // 모바일에서 키패드 사용을 강제하기 위해 readOnly 처리
         if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && this.dom.searchInput) {
             this.dom.searchInput.setAttribute('readonly', true);
             this.dom.searchInput.setAttribute('inputmode', 'none');
@@ -120,15 +121,26 @@ class SearchApp {
     }
     
     handleKeypadClick(e) {
-        const key = e.target.closest('.keypad-btn, .qwerty-key');
-        if (!key) return;
-        const dataKey = key.dataset.key;
+        // 버튼 또는 버튼 내부 요소를 클릭했을 때 처리
+        const keyBtn = e.target.closest('.keypad-btn, .qwerty-key');
+        if (!keyBtn) return;
+        
+        const dataKey = keyBtn.dataset.key;
         if (!dataKey) return;
 
         const input = this.dom.searchInput;
 
         if (dataKey === 'backspace') {
-            if (input.value.length > 0) input.value = input.value.slice(0, -1);
+            if (input.value.length > 0) {
+                // 한글 자소 단위 삭제 지원 (Hangul.d 사용)
+                if (window.Hangul) {
+                    let disassembled = Hangul.d(input.value);
+                    disassembled.pop();
+                    input.value = Hangul.a(disassembled);
+                } else {
+                    input.value = input.value.slice(0, -1);
+                }
+            }
             this.triggerSearch();
         } else if (dataKey === 'mode-kor') {
             this.showKeypad('kor');
@@ -141,12 +153,17 @@ class SearchApp {
         } else if (dataKey === 'shift-kor') {
             this.toggleShift();
         } else if (dataKey === 'shift-eng') {
-            
+            // 영문 쉬프트 구현 (대소문자 토글)
         } else if (dataKey === ' ') {
             input.value += ' ';
             this.triggerSearch();
         } else {
-            input.value = Hangul.assemble(input.value + dataKey);
+            // 한글 조합 또는 일반 문자 입력
+             if (window.Hangul && this.dom.keypadKor && !this.dom.keypadKor.classList.contains('keypad-hidden')) {
+                input.value = Hangul.assemble(input.value + dataKey);
+            } else {
+                input.value += dataKey;
+            }
             this.triggerSearch();
         }
         input.focus();
@@ -226,6 +243,7 @@ class SearchApp {
             const data = await response.json();
             
             if (data.status === 'success') {
+                // 데스크탑에서는 상세화면 iframe 초기화
                 if (this.dom.listContainer && this.dom.detailContainer) {
                     this.dom.listContainer.style.display = 'flex';
                     this.dom.detailContainer.style.display = 'none';
@@ -257,16 +275,18 @@ class SearchApp {
 
         products.forEach(p => {
             const html = `
-                <li class="list-group-item">
-                    <a href="/product/${p.product_id}" class="product-item d-flex align-items-center text-decoration-none text-body spa-link">
+                <li class="list-group-item p-0">
+                    <a href="/product/${p.product_id}" class="product-item d-flex align-items-center text-decoration-none text-body spa-link p-3">
                         <img src="${p.image_url}" alt="${p.product_name}" class="item-image rounded border flex-shrink-0" onerror="imgFallback(this)">
-                        <div class="item-details flex-grow-1 ms-3">
-                            <div class="product-name fw-bold">${p.product_name}</div>
-                            <div class="product-meta small text-muted">
+                        <div class="item-details flex-grow-1 ms-3 overflow-hidden">
+                            <div class="product-name fw-bold text-truncate">${p.product_name}</div>
+                            <div class="product-meta small text-muted d-flex align-items-center">
                                 <span class="meta-item me-2">${p.product_number}</span>
-                                ${p.colors ? `<span class="meta-item d-block d-sm-inline me-2"><i class="bi bi-palette"></i> ${p.colors}</span>` : ''}
+                                ${p.colors ? `<span class="meta-item text-truncate d-none d-sm-inline me-2" style="max-width:100px;">| ${p.colors}</span>` : ''}
+                            </div>
+                            <div class="d-flex align-items-center mt-1">
                                 <span class="meta-item me-2 fw-bold text-dark">${p.sale_price}</span>
-                                <span class="meta-item discount ${p.original_price > 0 ? 'text-danger' : 'text-secondary'}">${p.discount}</span>
+                                <span class="meta-item discount small fw-bold ${p.original_price > 0 ? 'text-danger' : 'text-secondary'}">${p.discount}</span>
                             </div>
                         </div>
                     </a>
@@ -282,7 +302,7 @@ class SearchApp {
             const li = document.createElement('li');
             li.className = `page-item ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`;
             const a = document.createElement('a');
-            a.className = 'page-link';
+            a.className = 'page-link shadow-none border-0 text-secondary';
             a.href = '#';
             a.textContent = text;
             if (!isDisabled && !isActive) a.onclick = (e) => { e.preventDefault(); this.performSearch(page); };
@@ -290,20 +310,23 @@ class SearchApp {
             return li;
         };
 
-        this.dom.paginationUL.appendChild(createItem(currentPage - 1, '«', false, currentPage === 1));
+        this.dom.paginationUL.appendChild(createItem(currentPage - 1, 'Prev', false, currentPage === 1));
         
-        let start = Math.max(1, currentPage - 2);
-        let end = Math.min(totalPages, currentPage + 2);
-        if (end - start < 4) {
-            if (start === 1) end = Math.min(totalPages, start + 4);
-            else if (end === totalPages) start = Math.max(1, end - 4);
-        }
+        // 페이지네이션 로직 간소화 (현재 페이지 주변만 표시)
+        let start = Math.max(1, currentPage - 1);
+        let end = Math.min(totalPages, currentPage + 1);
+
+        if(start > 1) this.dom.paginationUL.appendChild(createItem(1, '1', false, false));
+        if(start > 2) this.dom.paginationUL.appendChild(createItem(null, '...', false, true));
 
         for (let i = start; i <= end; i++) {
             this.dom.paginationUL.appendChild(createItem(i, i, i === currentPage, false));
         }
         
-        this.dom.paginationUL.appendChild(createItem(currentPage + 1, '»', false, currentPage === totalPages));
+        if(end < totalPages - 1) this.dom.paginationUL.appendChild(createItem(null, '...', false, true));
+        if(end < totalPages) this.dom.paginationUL.appendChild(createItem(totalPages, totalPages, false, false));
+        
+        this.dom.paginationUL.appendChild(createItem(currentPage + 1, 'Next', false, currentPage === totalPages));
     }
 }
 

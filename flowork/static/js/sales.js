@@ -1,11 +1,10 @@
 class SalesApp {
     constructor() {
-        // 아직 초기화되지 않은 컨테이너 찾기
+        // 초기화되지 않은 컨테이너 찾기
         this.container = document.querySelector('.sales-container:not([data-initialized])');
         if (!this.container) return;
         this.container.dataset.initialized = "true";
 
-        // 컨테이너의 dataset에서 설정 읽기
         this.urls = JSON.parse(this.container.dataset.apiUrls || '{}');
         this.targetStoreId = this.container.dataset.targetStoreId;
         
@@ -22,15 +21,12 @@ class SalesApp {
 
     cacheDom() {
         const c = this.container;
-        // 모달은 페이지 구조상 컨테이너 형제 요소로 존재할 수 있음
-        // 안전하게 현재 탭 페이지 레이어 내에서 찾도록 page-content-layer > ... 구조 활용 권장
-        // 여기서는 부모(page-content-layer)를 통해 형제 모달을 찾습니다.
         const parent = c.closest('.page-content-layer') || document;
 
         return {
             leftPanel: c.querySelector('#sales-left-panel'),
             rightPanel: c.querySelector('#sales-right-panel'),
-            mobileTabs: parent.querySelectorAll('.mobile-tab-btn'), // 탭 버튼은 컨테이너 밖에 있을 수 있음
+            mobileTabs: parent.querySelectorAll('.mobile-tab-btn'),
             dateSales: c.querySelector('#date-area-sales'),
             dateRefund: c.querySelector('#date-area-refund'),
             saleDate: c.querySelector('#sale-date'),
@@ -59,10 +55,7 @@ class SalesApp {
             recordsModalEl: parent.querySelector('#records-modal')
         };
     }
-    
-    // ... (이하 init 및 메소드들은 이전 Part 5의 코드와 동일) ...
-    // ... (단, this.dom 요소들이 올바르게 캐싱되었는지 확인) ...
-    
+
     init() {
         if (this.dom.detailModalEl) {
             this.detailModal = new bootstrap.Modal(this.dom.detailModalEl);
@@ -103,6 +96,7 @@ class SalesApp {
         if(this.dom.btnHold) this.dom.btnHold.addEventListener('click', () => this.toggleHold());
         if(this.dom.btnDiscount) this.dom.btnDiscount.addEventListener('click', () => this.applyAutoDiscount());
 
+        // 모바일 탭 전환 로직
         if(this.dom.mobileTabs) {
             this.dom.mobileTabs.forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -112,12 +106,15 @@ class SalesApp {
             });
         }
     }
-    
-    // (나머지 메소드 생략 - Part 5와 로직 동일)
+
     switchMobileTab(targetId) {
         this.dom.mobileTabs.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.target === targetId);
         });
+        
+        // CSS 클래스 조작 (.active)
+        // 데스크탑 CSS에서는 .sales-left, .sales-right가 항상 보이고, 
+        // 모바일 미디어쿼리에서만 display:none 처리됨.
         if (targetId === 'sales-left') {
             this.dom.leftPanel.classList.add('active');
             this.dom.rightPanel.classList.remove('active');
@@ -127,6 +124,9 @@ class SalesApp {
         }
     }
 
+    // ... (이하 post, loadSettings, setMode 등 API/로직 함수들은 기존과 동일하여 생략) ...
+    // ... (하지만 실제 전체 코드 전달이므로 아래에 포함합니다) ...
+    
     async post(url, data) {
         if (this.targetStoreId) {
             data.target_store_id = this.targetStoreId;
@@ -244,7 +244,8 @@ class SalesApp {
                 const addHandler = () => {
                     this.addToCart({ ...item, ...v, quantity: 1 });
                     this.detailModal.hide();
-                    this.switchMobileTab('sales-right'); 
+                    // 모바일에서만 장바구니 탭으로 자동 전환
+                    if(window.innerWidth < 992) this.switchMobileTab('sales-right'); 
                 };
                 tr.querySelector('.btn-add').onclick = addHandler;
                 tr.ondblclick = addHandler;
@@ -287,7 +288,7 @@ class SalesApp {
                 tr.onclick = async () => {
                     await this.loadRefundCart(rec.sale_id, rec.receipt_number);
                     this.recordsModal.hide();
-                    this.switchMobileTab('sales-right');
+                    if(window.innerWidth < 992) this.switchMobileTab('sales-right');
                 };
                 tbody.appendChild(tr);
             });
@@ -349,7 +350,7 @@ class SalesApp {
         this.cart.forEach((item, idx) => {
             const org = item.original_price || item.sale_price;
             const sale = item.sale_price;
-            let discountRate = (org > 0 && org > sale) ? Math.round((1 - (sale / org)) * 100) : 0;
+            // let discountRate = (org > 0 && org > sale) ? Math.round((1 - (sale / org)) * 100) : 0;
             
             const unit = sale - item.discount_amount;
             const sub = unit * item.quantity;

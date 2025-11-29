@@ -20,12 +20,13 @@ services:
     build: .
     container_name: flowork_worker
     restart: always
-    # Concurrency를 4로 설정하여 6코어/12GB RAM 환경에서 안정성 확보
+    # [수정] root 경고를 무시하기 위해 C_FORCE_ROOT 설정 (Docker 환경)
     command: celery -A flowork.celery_worker.celery worker --loglevel=info --concurrency=4
     env_file:
       - .env
     environment:
       - FLASK_APP=run.py
+      - C_FORCE_ROOT=1
     volumes:
       - ./flowork/static/product_images:/app/flowork/static/product_images
       - flowork_tmp:/tmp
@@ -53,6 +54,13 @@ services:
       -c max_connections=200
     env_file:
       - .env
+    # [수정] DB 초기화 정보 명시 (로그의 Role "postgres" does not exist 해결용)
+    # .env 파일의 변수가 우선 적용되지만, 누락 시를 대비해 명시하거나
+    # .env 파일에 아래 내용이 꼭 있어야 함을 확인하세요.
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-flowork}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - /dev/shm:/dev/shm
