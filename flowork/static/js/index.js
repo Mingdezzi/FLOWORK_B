@@ -54,7 +54,6 @@ class SearchApp {
     }
 
     checkMobileMode() {
-        // 모바일에서 키패드 사용을 강제하기 위해 readOnly 처리
         if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && this.dom.searchInput) {
             this.dom.searchInput.setAttribute('readonly', true);
             this.dom.searchInput.setAttribute('inputmode', 'none');
@@ -106,8 +105,8 @@ class SearchApp {
             
             if (this.dom.detailIframe) this.dom.detailIframe.src = detailUrl;
             if (this.dom.listContainer && this.dom.detailContainer) {
-                this.dom.listContainer.style.display = 'none';
-                this.dom.detailContainer.style.display = 'flex';
+                this.dom.listContainer.style.display = 'flex';
+                this.dom.detailContainer.style.display = 'none';
             }
         }
     }
@@ -121,18 +120,16 @@ class SearchApp {
     }
     
     handleKeypadClick(e) {
-        // 버튼 또는 버튼 내부 요소를 클릭했을 때 처리
-        const keyBtn = e.target.closest('.keypad-btn, .qwerty-key');
-        if (!keyBtn) return;
-        
-        const dataKey = keyBtn.dataset.key;
+        const key = e.target.closest('.keypad-btn, .qwerty-key');
+        if (!key) return;
+        const dataKey = key.dataset.key;
         if (!dataKey) return;
 
         const input = this.dom.searchInput;
 
         if (dataKey === 'backspace') {
             if (input.value.length > 0) {
-                // 한글 자소 단위 삭제 지원 (Hangul.d 사용)
+                // Hangul.d 사용 (base.html에서 로드됨)
                 if (window.Hangul) {
                     let disassembled = Hangul.d(input.value);
                     disassembled.pop();
@@ -153,12 +150,11 @@ class SearchApp {
         } else if (dataKey === 'shift-kor') {
             this.toggleShift();
         } else if (dataKey === 'shift-eng') {
-            // 영문 쉬프트 구현 (대소문자 토글)
+            // 영문 쉬프트 기능은 현재 미구현
         } else if (dataKey === ' ') {
             input.value += ' ';
             this.triggerSearch();
         } else {
-            // 한글 조합 또는 일반 문자 입력
              if (window.Hangul && this.dom.keypadKor && !this.dom.keypadKor.classList.contains('keypad-hidden')) {
                 input.value = Hangul.assemble(input.value + dataKey);
             } else {
@@ -243,7 +239,7 @@ class SearchApp {
             const data = await response.json();
             
             if (data.status === 'success') {
-                // 데스크탑에서는 상세화면 iframe 초기화
+                // 데스크탑 상세화면 초기화 (리스트 모드로)
                 if (this.dom.listContainer && this.dom.detailContainer) {
                     this.dom.listContainer.style.display = 'flex';
                     this.dom.detailContainer.style.display = 'none';
@@ -312,7 +308,6 @@ class SearchApp {
 
         this.dom.paginationUL.appendChild(createItem(currentPage - 1, 'Prev', false, currentPage === 1));
         
-        // 페이지네이션 로직 간소화 (현재 페이지 주변만 표시)
         let start = Math.max(1, currentPage - 1);
         let end = Math.min(totalPages, currentPage + 1);
 

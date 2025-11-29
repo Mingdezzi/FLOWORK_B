@@ -32,6 +32,7 @@ body {
     }
 }
 
+/* --- 공통 UI 컴포넌트 --- */
 .card {
     border: none;
     box-shadow: 0 2px 6px rgba(0,0,0,0.04);
@@ -66,6 +67,7 @@ body {
     border-color: #eb6864;
 }
 
+/* --- SPA Tabs Style --- */
 .chrome-tabs-shell {
     background: #e3e5e8;
     padding: 8px 8px 0 8px;
@@ -219,5 +221,128 @@ body {
     }
     #page-container-wrapper {
         padding-top: 1rem;
+    }
+}
+
+/* --- [복원] Search Page Keypad Styles --- */
+.keypad-hidden { display: none !important; }
+
+.keypad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+}
+
+.keypad-btn {
+    height: 55px;
+    font-size: 1.2rem;
+    font-weight: 500;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background-color: #fff;
+    color: #212529;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.keypad-btn:active {
+    background-color: #e9ecef;
+}
+
+.keypad-grid .keypad-btn[data-key="backspace"] { grid-column: 1 / 2; font-size: 1.1rem; background-color: #f8f9fa; }
+.keypad-grid .keypad-btn[data-key="0"] { grid-column: 2 / 3; }
+.keypad-grid .keypad-btn[data-key="mode-kor"] { grid-column: 3 / 4; font-size: 1rem; background-color: #eb6864; color: white; border-color: #eb6864; }
+
+.keypad-qwerty {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.qwerty-row {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+    justify-content: center;
+}
+
+.qwerty-key {
+    flex-grow: 1;
+    height: 50px;
+    padding: 0;
+    font-size: 1.1rem;
+    font-weight: 500;
+    border: 1px solid #dee2e6;
+    background-color: #fff;
+    color: #212529;
+    border-radius: 4px;
+}
+
+.qwerty-key:active {
+    background-color: #ced4da;
+}
+
+.qwerty-key.key-special {
+    background-color: #f8f9fa;
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #495057;
+    flex-grow: 1.5;
+}
+
+.qwerty-key.key-special.active {
+    background-color: #eb6864;
+    border-color: #eb6864;
+    color: white;
+}
+
+.qwerty-row-bottom {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 5px;
+}
+
+.qwerty-row-bottom .keypad-btn {
+    height: 50px;
+    font-size: 1rem;
+    width: 100%;
+}
+
+#category-bar .category-btn {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#category-bar .category-btn.active {
+    background-color: #eb6864;
+    border-color: #eb6864;
+    color: white;
+}
+
+/* --- [복원] Stock Table Layout --- */
+.stock-table th, .stock-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+.variant-edit-input {
+    text-align: center;
+}
+
+/* --- Sales Page Responsive (Desktop: Grid) --- */
+@media (min-width: 992px) {
+    .sales-container .row {
+        height: 100%;
+    }
+    .sales-panel {
+        height: 100%;
+        overflow: hidden;
+    }
+    /* 데스크탑에서는 탭 버튼 숨김 (이미 html d-lg-none 처리됨) */
+    /* 좌우 패널 모두 보임 */
+    .sales-left, .sales-right {
+        display: flex !important; 
     }
 }

@@ -1,11 +1,13 @@
 {% extends 'base.html' %}
 
+{% block body_attrs %}
+data-input-mode="num"
+data-live-search-url="{{ url_for('api.live_search') }}"
+data-image-url-prefix="{{ IMAGE_URL_PREFIX }}"
+{% endblock %}
+
 {% block content %}
-<div class="search-container container my-4"
-     data-input-mode="num"
-     data-live-search-url="{{ url_for('api.live_search') }}"
-     data-image-url-prefix="{{ IMAGE_URL_PREFIX }}">
-     
+<div class="search-container container my-4">
     <div class="row">
         <div class="col-lg-5 mb-3">
             <div class="card h-100 border-0 shadow-sm">
@@ -21,8 +23,7 @@
                         <input type="hidden" name="selected_category" id="selected-category" value="{{ selected_category or '전체' }}">
                     </form>
 
-                    <div id="category-bar" class="category-grid mb-3" 
-                         style="display:grid; grid-template-columns: repeat({{ category_config.columns }}, 1fr); gap:4px;">
+                    <div id="category-bar" class="mb-3 d-grid" style="grid-template-columns: repeat({{ category_config.columns }}, 1fr); gap: 4px;">
                         {% for btn in category_config.buttons %}
                         <button class="btn btn-sm btn-outline-secondary category-btn {{ 'active' if selected_category == btn.value else '' }}" 
                                 data-category="{{ btn.value }}">
@@ -32,7 +33,6 @@
                     </div>
 
                     <div id="keypad-container" class="mt-auto pt-3 border-top">
-                        
                         <div id="keypad-num" class="keypad-grid">
                             <button class="btn keypad-btn num-btn" data-key="1">1</button>
                             <button class="btn keypad-btn num-btn" data-key="2">2</button>
@@ -49,7 +49,7 @@
                         </div>
                         
                         <div id="keypad-kor" class="keypad-qwerty keypad-hidden">
-                            <div class="qwerty-row">
+                             <div class="qwerty-row">
                                 <button class="qwerty-key" data-key="ㅂ">ㅂ</button>
                                 <button class="qwerty-key" data-key="ㅈ">ㅈ</button>
                                 <button class="qwerty-key" data-key="ㄷ">ㄷ</button>
@@ -206,21 +206,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script src="https://unpkg.com/hangul-js"></script>
-<script src="{{ url_for('static', filename='js/index.js') }}" defer></script>
-<script>
-    function imgFallback(img) {
-        const src = img.src;
-        if (src.includes('_DF_01.jpg')) {
-            img.src = src.replace('_DF_01.jpg', '_DM_01.jpg');
-        } else if (src.includes('_DM_01.jpg')) {
-            img.src = src.replace('_DM_01.jpg', '_DG_01.jpg');
-        } else {
-            img.style.visibility = 'hidden';
-        }
-    }
-</script>
 {% endblock %}
