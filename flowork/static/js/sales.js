@@ -1,6 +1,7 @@
 class SalesApp {
     constructor() {
         this.urls = JSON.parse(document.body.dataset.apiUrls);
+        this.targetStoreId = document.body.dataset.targetStoreId; // 추가
         this.mode = 'sales';
         this.cart = [];
         this.heldCart = null;
@@ -79,9 +80,26 @@ class SalesApp {
         document.getElementById('records-modal').addEventListener('hidden.bs.modal', modalHiddenHandler);
     }
 
+    // API 호출 시 target_store_id 추가
+    async post(url, data) {
+        if (this.targetStoreId) {
+            data.target_store_id = this.targetStoreId;
+        }
+        return await Flowork.post(url, data);
+    }
+    
+    // GET 요청은 쿼리 파라미터로 처리되므로 (이미 URL에 포함되거나 별도 처리),
+    // settings 같은 경우 POST로 받는 경우도 있으니 유의.
+    
     async loadSettings() {
         try {
-            const data = await Flowork.get(this.urls.salesSettings);
+            // Settings API는 GET일 때도 target_store_id가 필요할 수 있음. 
+            // SalesApp에서는 GET /api/sales/settings 호출. 이 endpoint는 query param도 받도록 수정됨.
+            let url = this.urls.salesSettings;
+            if (this.targetStoreId) {
+                url += (url.includes('?') ? '&' : '?') + 'target_store_id=' + this.targetStoreId;
+            }
+            const data = await Flowork.get(url);
             if (data.status === 'success') this.config = data.config;
         } catch (e) { console.error("Settings Load Failed", e); }
     }
@@ -133,7 +151,8 @@ class SalesApp {
                 end_date: this.dom.refundEnd.value
             };
             
-            const data = await Flowork.post(this.urls.searchSalesProducts, payload);
+            // this.post wrapper 사용
+            const data = await this.post(this.urls.searchSalesProducts, payload);
             this.dom.leftTbody.innerHTML = '';
 
             if (!data.results || data.results.length === 0) {
@@ -176,7 +195,7 @@ class SalesApp {
         this.dom.detailModal.show();
 
         try {
-            const data = await Flowork.post(this.urls.searchSalesProducts, { 
+            const data = await this.post(this.urls.searchSalesProducts, { 
                 query: item.product_number, 
                 mode: 'detail_stock' 
             });
@@ -211,7 +230,7 @@ class SalesApp {
         this.dom.recordsModal.show();
 
         try {
-            const data = await Flowork.post(this.urls.getRefundRecords, {
+            const data = await this.post(this.urls.getRefundRecords, {
                 product_number: item.product_number,
                 color: item.color,
                 start_date: this.dom.refundStart.value,
@@ -248,7 +267,10 @@ class SalesApp {
 
     async loadRefundCart(saleId, receiptNumber) {
         try {
-            const url = this.urls.saleDetails.replace('999999', saleId);
+            let url = this.urls.saleDetails.replace('999999', saleId);
+            if (this.targetStoreId) {
+                url += (url.includes('?') ? '&' : '?') + 'target_store_id=' + this.targetStoreId;
+            }
             const data = await Flowork.get(url);
             
             if (data.status === 'success') {
@@ -401,7 +423,7 @@ class SalesApp {
                 is_online: this.isOnline
             };
 
-            const res = await Flowork.post(this.urls.submitSales, payload);
+            const res = await this.post(this.urls.submitSales, payload);
             if (res.status === 'success') {
                 alert('판매 등록 완료');
                 this.cart = []; 
@@ -418,7 +440,7 @@ class SalesApp {
 
         try {
             const url = this.urls.refund.replace('999999', this.refundSaleId);
-            const res = await Flowork.post(url, {});
+            const res = await this.post(url, {});
             if (res.status === 'success') {
                 alert('환불 완료');
                 this.resetRefund();

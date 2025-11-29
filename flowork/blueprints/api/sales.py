@@ -13,13 +13,26 @@ from flowork.utils import clean_string_upper, get_sort_key
 from flowork.services.sales_service import SalesService
 from . import api_bp
 
+def _get_target_store_id():
+    """요청에서 target_store_id를 추출하거나 현재 사용자의 매장 ID 사용"""
+    if current_user.store_id:
+        return current_user.store_id
+    
+    # 관리자일 경우 request JSON이나 args에서 확인
+    if current_user.is_admin or current_user.is_super_admin:
+        if request.is_json:
+            return request.json.get('target_store_id')
+        else:
+            return request.args.get('target_store_id', type=int)
+    return None
+
 @api_bp.route('/api/sales/settings', methods=['GET', 'POST'])
 @login_required
 def sales_settings():
-    if not current_user.store_id:
-        return jsonify({'status': 'error', 'message': '매장 권한 필요'}), 403
+    store_id = _get_target_store_id()
+    if not store_id: return jsonify({'status': 'error', 'message': '매장 정보 필요'}), 400
     
-    SETTING_KEY = f'SALES_CONFIG_{current_user.store_id}'
+    SETTING_KEY = f'SALES_CONFIG_{store_id}'
     
     if request.method == 'POST':
         data = request.json
@@ -33,7 +46,6 @@ def sales_settings():
             db.session.add(setting)
         db.session.commit()
         return jsonify({'status': 'success', 'message': '판매 설정이 저장되었습니다.'})
-        
     else:
         setting = Setting.query.filter_by(brand_id=current_user.current_brand_id, key=SETTING_KEY).first()
         config = json.loads(setting.value) if setting and setting.value else {}
@@ -42,7 +54,8 @@ def sales_settings():
 @api_bp.route('/api/sales', methods=['POST'])
 @login_required
 def create_sale():
-    if not current_user.store_id: return jsonify({'status': 'error'}), 403
+    store_id = _get_target_store_id()
+    if not store_id: return jsonify({'status': 'error', 'message': '권한 없음 또는 매장 미선택'}), 403
         
     data = request.json
     items = data.get('items', [])
@@ -53,7 +66,7 @@ def create_sale():
     if not items: return jsonify({'status': 'error', 'message': '상품 없음'}), 400
     
     result = SalesService.create_sale(
-        store_id=current_user.store_id,
+        store_id=store_id,
         user_id=current_user.id,
         sale_date_str=date_str,
         items=items,
@@ -67,8 +80,8 @@ def create_sale():
 @api_bp.route('/api/sales/search_products', methods=['POST'])
 @login_required
 def search_sales_products():
-    if not current_user.store_id:
-        return jsonify({'status': 'error', 'message': '권한 없음'}), 403
+    store_id = _get_target_store_id()
+    if not store_id: return jsonify({'status': 'error', 'message': '권한 없음'}), 403
     
     data = request.json
     query = data.get('query', '').strip()
@@ -98,7 +111,7 @@ def search_sales_products():
         variants.sort(key=lambda v: get_sort_key(v, brand_settings))
         
         stocks = db.session.query(StoreStock).filter(
-            StoreStock.store_id == current_user.store_id,
+            StoreStock.store_id == store_id,
             StoreStock.variant_id.in_([v.id for v in variants])
         ).all()
         stock_map = {s.variant_id: s.quantity for s in stocks}
@@ -146,7 +159,7 @@ def search_sales_products():
             
             if mode == 'sales':
                 stocks = db.session.query(func.sum(StoreStock.quantity)).filter(
-                    StoreStock.store_id == current_user.store_id,
+                    StoreStock.store_id == store_id,
                     StoreStock.variant_id.in_(v_data['ids'])
                 ).scalar()
                 stat_qty = stocks if stocks else 0
@@ -156,7 +169,7 @@ def search_sales_products():
                 end_dt = data.get('end_date')
                 if start_dt and end_dt:
                     sold = db.session.query(func.sum(SaleItem.quantity)).join(Sale).filter(
-                        Sale.store_id == current_user.store_id,
+                        Sale.store_id == store_id,
                         Sale.sale_date >= start_dt,
                         Sale.sale_date <= end_dt,
                         Sale.status == 'valid',
@@ -172,8 +185,8 @@ def search_sales_products():
 @api_bp.route('/api/sales/refund_records', methods=['POST'])
 @login_required
 def get_refund_records():
-    if not current_user.store_id:
-        return jsonify({'status': 'error'}), 403
+    store_id = _get_target_store_id()
+    if not store_id: return jsonify({'status': 'error', 'message': '권한 없음'}), 403
         
     data = request.json
     pn = data.get('product_number')
@@ -191,7 +204,7 @@ def get_refund_records():
     if not v_ids: return jsonify({'records': []})
     
     items = db.session.query(Sale, SaleItem).join(SaleItem).filter(
-        Sale.store_id == current_user.store_id,
+        Sale.store_id == store_id,
         Sale.sale_date >= start_dt,
         Sale.sale_date <= end_dt,
         Sale.status == 'valid',
@@ -214,101 +227,18 @@ def get_refund_records():
         
     return jsonify({'status': 'success', 'records': records})
 
-@api_bp.route('/api/sales/list_by_date', methods=['GET'])
-@login_required
-def get_sales_by_date():
-    if not current_user.store_id:
-        return jsonify({'status': 'error', 'message': '권한이 없습니다.'}), 403
-        
-    date_str = request.args.get('date')
-    if not date_str:
-        return jsonify({'status': 'error', 'message': '날짜가 필요합니다.'}), 400
-
-    try:
-        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        
-        sales = Sale.query.options(
-            selectinload(Sale.items)
-        ).filter_by(
-            store_id=current_user.store_id, 
-            sale_date=target_date
-        ).order_by(Sale.daily_number.desc()).all()
-        
-        results = []
-        for s in sales:
-            items_summary = ", ".join([f"{i.product_name}({i.color}/{i.size})" for i in s.items])
-            if len(items_summary) > 30:
-                items_summary = items_summary[:30] + "..."
-            
-            results.append({
-                'id': s.id,
-                'receipt_number': s.receipt_number,
-                'time': s.created_at.strftime('%H:%M'),
-                'items_summary': items_summary,
-                'total_amount': s.total_amount,
-                'status': s.status
-            })
-            
-        return jsonify({'status': 'success', 'sales': results})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-@api_bp.route('/api/sales/search_history', methods=['POST'])
-@login_required
-def search_sales_history():
-    if not current_user.store_id: return jsonify({'status': 'error'}), 403
-    
-    data = request.json
-    query = data.get('query', '').strip()
-    page = data.get('page', 1)
-    per_page = 10
-    
-    if not query: return jsonify({'status': 'success', 'results': [], 'has_next': False})
-    
-    try:
-        q = clean_string_upper(query)
-        base_query = db.session.query(SaleItem, Sale).join(Sale).filter(
-            Sale.store_id == current_user.store_id,
-            or_(
-                SaleItem.product_number.ilike(f"%{q}%"),
-                SaleItem.product_name.ilike(f"%{q}%")
-            )
-        ).order_by(Sale.sale_date.desc(), Sale.id.desc())
-        
-        pagination = base_query.paginate(page=page, per_page=per_page, error_out=False)
-        
-        results = []
-        for item, sale in pagination.items:
-            results.append({
-                'sale_id': sale.id,
-                'receipt_number': sale.receipt_number,
-                'date': sale.sale_date.strftime('%Y-%m-%d'),
-                'product_info': f"{item.product_name} ({item.color}/{item.size})",
-                'qty': item.quantity,
-                'amount': item.subtotal,
-                'status': sale.status
-            })
-            
-        return jsonify({
-            'status': 'success', 
-            'results': results, 
-            'has_next': pagination.has_next,
-            'page': page
-        })
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
 @api_bp.route('/api/sales/export_daily', methods=['GET'])
 @login_required
 def export_daily_sales():
-    if not current_user.store_id: return jsonify({'status': 'error'}), 403
+    store_id = _get_target_store_id()
+    if not store_id: return jsonify({'status': 'error'}), 403
     
     date_str = request.args.get('date')
     if not date_str: return "날짜가 필요합니다.", 400
     
     try:
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        sales = Sale.query.filter_by(store_id=current_user.store_id, sale_date=target_date).order_by(Sale.daily_number).all()
+        sales = Sale.query.filter_by(store_id=store_id, sale_date=target_date).order_by(Sale.daily_number).all()
         
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -364,9 +294,10 @@ def export_daily_sales():
 @api_bp.route('/api/sales/<int:sale_id>/refund', methods=['POST'])
 @login_required
 def refund_sale(sale_id):
-    if not current_user.store_id: return jsonify({'status': 'error'}), 403
+    store_id = _get_target_store_id()
+    if not store_id: return jsonify({'status': 'error'}), 403
     
-    result = SalesService.refund_sale_full(sale_id, current_user.store_id, current_user.id)
+    result = SalesService.refund_sale_full(sale_id, store_id, current_user.id)
     
     status_code = 200 if result['status'] == 'success' else 500
     return jsonify(result), status_code
@@ -374,7 +305,8 @@ def refund_sale(sale_id):
 @api_bp.route('/api/sales/<int:sale_id>/refund_partial', methods=['POST'])
 @login_required
 def refund_sale_partial(sale_id):
-    if not current_user.store_id: return jsonify({'status': 'error'}), 403
+    store_id = _get_target_store_id()
+    if not store_id: return jsonify({'status': 'error'}), 403
     
     data = request.json
     refund_items = data.get('items', []) 
@@ -382,7 +314,7 @@ def refund_sale_partial(sale_id):
     if not refund_items:
         return jsonify({'status': 'error', 'message': '환불할 상품이 없습니다.'}), 400
 
-    result = SalesService.refund_sale_partial(sale_id, current_user.store_id, current_user.id, refund_items)
+    result = SalesService.refund_sale_partial(sale_id, store_id, current_user.id, refund_items)
     
     status_code = 200 if result['status'] == 'success' else 500
     return jsonify(result), status_code
@@ -391,9 +323,10 @@ def refund_sale_partial(sale_id):
 @api_bp.route('/api/sales/<int:sale_id>/details', methods=['GET'])
 @login_required
 def get_sale_details(sale_id):
-    if not current_user.store_id: return jsonify({'status': 'error'}), 403
+    store_id = _get_target_store_id()
+    if not store_id: return jsonify({'status': 'error'}), 403
     
-    sale = Sale.query.filter_by(id=sale_id, store_id=current_user.store_id).first()
+    sale = Sale.query.filter_by(id=sale_id, store_id=store_id).first()
     if not sale: return jsonify({'status': 'error'}), 404
     
     items = []
@@ -425,6 +358,9 @@ def get_sale_details(sale_id):
 @api_bp.route('/api/sales/product_variants', methods=['POST'])
 @login_required
 def get_product_variants_for_sale():
+    store_id = _get_target_store_id()
+    if not store_id: return jsonify({'status': 'error'}), 403
+
     data = request.json
     product_id = data.get('product_id')
     if not product_id: return jsonify({'status': 'error', 'message': 'ID 없음'}), 400
@@ -437,7 +373,7 @@ def get_product_variants_for_sale():
         variants.sort(key=lambda v: get_sort_key(v, brand_settings))
 
         variant_ids = [v.id for v in variants]
-        stocks = db.session.query(StoreStock).filter(StoreStock.store_id == current_user.store_id, StoreStock.variant_id.in_(variant_ids)).all()
+        stocks = db.session.query(StoreStock).filter(StoreStock.store_id == store_id, StoreStock.variant_id.in_(variant_ids)).all()
         stock_map = {s.variant_id: s.quantity for s in stocks}
         
         result = []
