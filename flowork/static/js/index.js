@@ -1,6 +1,6 @@
 class SearchApp {
     constructor() {
-        // 1. 컨테이너 찾기 (SPA 탭 격리)
+        // 1. 컨테이너 찾기
         this.container = document.querySelector('.search-container:not([data-initialized])');
         if (!this.container) return;
         this.container.dataset.initialized = "true";
@@ -22,7 +22,7 @@ class SearchApp {
             keypadKor: this.container.querySelector('#keypad-kor'),
             keypadEng: this.container.querySelector('#keypad-eng'),
             
-            // 리스트/상세 뷰
+            // 리스트/상세 뷰 (중요: 우측 패널 전환 로직용)
             productListUl: this.container.querySelector('#product-list-ul'),
             productListHeader: this.container.querySelector('#product-list-header'),
             paginationUL: this.container.querySelector('#search-pagination'),
@@ -47,28 +47,24 @@ class SearchApp {
 
         this.init();
     }
-
+    
+    // ... (init, checkMobileMode, bindEvents 등 기존 로직 유지) ...
     init() {
         this.checkMobileMode();
         this.bindEvents();
         
-        // 초기 화면: 숫자 키패드 표시
         this.showKeypad('num');
         
-        // 초기 카테고리 활성화
         if (this.dom.hiddenCategoryInput) {
             const currentCategory = this.dom.hiddenCategoryInput.value || '전체';
             this.dom.categoryButtons.forEach(btn => {
                 if (btn.dataset.category === currentCategory) btn.classList.add('active');
             });
         }
-        
-        // 초기 검색 실행
         this.performSearch(1);
     }
 
     checkMobileMode() {
-        // 모바일에서 가상 키보드 올라오지 않게 설정 (키패드 사용 유도)
         if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && this.dom.searchInput) {
             this.dom.searchInput.setAttribute('readonly', true);
             this.dom.searchInput.setAttribute('inputmode', 'none');
@@ -76,21 +72,17 @@ class SearchApp {
     }
 
     bindEvents() {
-        // (1) 키패드 클릭 이벤트 (가장 중요)
+        // (1) 키패드 클릭
         if (this.dom.keypadContainer) {
             this.dom.keypadContainer.addEventListener('click', (e) => this.handleKeypadClick(e));
-            // 터치 이벤트 중복 방지 (선택사항)
-            this.dom.keypadContainer.addEventListener('touchend', (e) => {
-                // e.preventDefault(); // 상황에 따라 필요할 수 있음
-            });
         }
 
-        // (2) 카테고리 버튼 클릭
+        // (2) 카테고리 버튼
         this.dom.categoryButtons.forEach(btn => {
             btn.addEventListener('click', (e) => this.handleCategoryClick(e));
         });
 
-        // (3) 검색어 초기화 버튼
+        // (3) 검색어 초기화
         if (this.dom.clearTopBtn) {
             this.dom.clearTopBtn.addEventListener('click', () => {
                 this.dom.searchInput.value = '';
@@ -99,10 +91,9 @@ class SearchApp {
             });
         }
 
-        // (4) 검색어 입력창 직접 입력 (PC 키보드 대응)
+        // (4) 검색어 입력
         if (this.dom.searchInput) {
             this.dom.searchInput.addEventListener('input', (e) => {
-                // readonly가 아닐 때만 트리거 (모바일 키패드 입력과 충돌 방지)
                 if (!this.dom.searchInput.readOnly) this.triggerSearch();
             });
             this.dom.searchInput.addEventListener('keydown', (e) => {
@@ -121,63 +112,39 @@ class SearchApp {
             });
         }
         
-        // (6) 리스트 아이템 클릭 (상세보기)
+        // (6) 리스트 아이템 클릭 (상세보기 로직 수정)
         if (this.dom.productListUl) {
             this.dom.productListUl.addEventListener('click', (e) => this.handleProductClick(e));
         }
         
-        // (7) 상세화면 뒤로가기
+        // (7) 뒤로가기
         if (this.dom.backButton) {
             this.dom.backButton.addEventListener('click', () => this.handleBackButtonClick());
         }
     }
 
+    // ... (키패드 로직 handleKeypadClick 등은 기존과 동일) ...
     handleKeypadClick(e) {
-        // 클릭된 요소가 버튼이거나 그 내부인지 확인
         const btn = e.target.closest('button.keypad-btn, button.qwerty-key');
         if (!btn) return;
-
-        e.preventDefault(); // 버튼 클릭 시 포커스 잃거나 폼 제출되는 것 방지
-        
+        e.preventDefault();
         const key = btn.dataset.key;
         if (!key) return;
-
         const input = this.dom.searchInput;
 
-        // --- 기능 키 처리 ---
         switch (key) {
-            case 'backspace':
-                this.handleBackspace(input);
-                break;
-            case 'mode-kor':
-                this.showKeypad('kor');
-                break;
-            case 'mode-eng':
-                this.showKeypad('eng');
-                this.resetShift();
-                break;
-            case 'mode-num':
-                this.showKeypad('num');
-                this.resetShift();
-                break;
-            case 'shift-kor':
-                this.toggleShiftKor();
-                break;
-            case 'shift-eng':
-                // 영문 대소문자 토글 등 (필요 시 구현)
-                break;
-            case ' ':
-                input.value += ' ';
-                this.triggerSearch();
-                break;
-            default:
-                this.handleInputChar(input, key);
-                break;
+            case 'backspace': this.handleBackspace(input); break;
+            case 'mode-kor': this.showKeypad('kor'); break;
+            case 'mode-eng': this.showKeypad('eng'); this.resetShift(); break;
+            case 'mode-num': this.showKeypad('num'); this.resetShift(); break;
+            case 'shift-kor': this.toggleShiftKor(); break;
+            case 'shift-eng': break;
+            case ' ': input.value += ' '; this.triggerSearch(); break;
+            default: this.handleInputChar(input, key); break;
         }
     }
 
     handleInputChar(input, char) {
-        // 한글 조합 라이브러리(Hangul)가 있으면 사용, 없으면 단순 추가
         if (window.Hangul && this.dom.keypadKor && !this.dom.keypadKor.classList.contains('keypad-hidden')) {
             input.value = Hangul.assemble(input.value + char);
         } else {
@@ -189,7 +156,6 @@ class SearchApp {
     handleBackspace(input) {
         if (input.value.length > 0) {
             if (window.Hangul) {
-                // 한글 자소 단위 삭제
                 let disassembled = Hangul.d(input.value);
                 disassembled.pop();
                 input.value = Hangul.a(disassembled);
@@ -201,37 +167,25 @@ class SearchApp {
     }
 
     showKeypad(mode) {
-        // 모든 키패드 숨김
         if(this.dom.keypadNum) this.dom.keypadNum.classList.add('keypad-hidden');
         if(this.dom.keypadKor) this.dom.keypadKor.classList.add('keypad-hidden');
         if(this.dom.keypadEng) this.dom.keypadEng.classList.add('keypad-hidden');
 
-        // 선택된 키패드만 표시
-        if (mode === 'kor' && this.dom.keypadKor) {
-            this.dom.keypadKor.classList.remove('keypad-hidden');
-        } else if (mode === 'eng' && this.dom.keypadEng) {
-            this.dom.keypadEng.classList.remove('keypad-hidden');
-        } else if (this.dom.keypadNum) {
-            this.dom.keypadNum.classList.remove('keypad-hidden');
-        }
+        if (mode === 'kor' && this.dom.keypadKor) this.dom.keypadKor.classList.remove('keypad-hidden');
+        else if (mode === 'eng' && this.dom.keypadEng) this.dom.keypadEng.classList.remove('keypad-hidden');
+        else if (this.dom.keypadNum) this.dom.keypadNum.classList.remove('keypad-hidden');
     }
 
     toggleShiftKor() {
         this.state.isKorShiftActive = !this.state.isKorShiftActive;
-        
-        // Shift 버튼 스타일 변경
         const shiftBtn = this.dom.keypadKor.querySelector('[data-key="shift-kor"]');
         if (shiftBtn) {
             shiftBtn.classList.toggle('active', this.state.isKorShiftActive);
             shiftBtn.classList.toggle('btn-primary', this.state.isKorShiftActive);
             shiftBtn.classList.toggle('btn-outline-secondary', !this.state.isKorShiftActive);
         }
-
-        // 키맵 변경 (ㅂ->ㅃ 등)
         const mapToUse = this.state.isKorShiftActive ? this.korKeyMap : this.korReverseKeyMap;
-        
         for (const [fromKey, toKey] of Object.entries(mapToUse)) {
-            // 해당 키를 가진 버튼 찾기
             const btn = this.dom.keypadKor.querySelector(`[data-key="${fromKey}"]`);
             if (btn) {
                 btn.dataset.key = toKey;
@@ -241,43 +195,29 @@ class SearchApp {
     }
 
     resetShift() {
-        if (this.state.isKorShiftActive) {
-            this.toggleShiftKor();
-        }
+        if (this.state.isKorShiftActive) this.toggleShiftKor();
     }
 
     handleCategoryClick(e) {
-        const btn = e.currentTarget; // bindEvents에서 직접 걸었으므로 currentTarget 사용
-        
+        const btn = e.currentTarget;
         this.dom.categoryButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
-        if (this.dom.hiddenCategoryInput) {
-            this.dom.hiddenCategoryInput.value = btn.dataset.category;
-        }
+        if (this.dom.hiddenCategoryInput) this.dom.hiddenCategoryInput.value = btn.dataset.category;
         this.performSearch(1);
     }
 
     triggerSearch(immediate = false) {
         if (this.state.debounceTimer) clearTimeout(this.state.debounceTimer);
-        
-        if (immediate) {
-            this.performSearch(1);
-        } else {
-            this.state.debounceTimer = setTimeout(() => this.performSearch(1), 300);
-        }
+        if (immediate) this.performSearch(1);
+        else this.state.debounceTimer = setTimeout(() => this.performSearch(1), 300);
     }
 
     async performSearch(page = 1) {
         const query = this.dom.searchInput ? this.dom.searchInput.value : '';
         const category = this.dom.hiddenCategoryInput ? this.dom.hiddenCategoryInput.value : '전체';
         
-        if (this.dom.productListUl) {
-            this.dom.productListUl.innerHTML = '<li class="list-group-item text-center text-muted p-4">검색 중...</li>';
-        }
-        if (this.dom.paginationUL) {
-            this.dom.paginationUL.innerHTML = '';
-        }
+        if (this.dom.productListUl) this.dom.productListUl.innerHTML = '<li class="list-group-item text-center text-muted p-4">검색 중...</li>';
+        if (this.dom.paginationUL) this.dom.paginationUL.innerHTML = '';
 
         try {
             const response = await fetch(this.liveSearchUrl, {
@@ -288,7 +228,7 @@ class SearchApp {
             const data = await response.json();
             
             if (data.status === 'success') {
-                // 상세화면이 열려있었다면 리스트로 복귀 (데스크탑)
+                // [수정] 검색 시 상세 화면 닫고 리스트 화면으로 복귀 (우측 패널 초기화)
                 if (this.dom.listContainer && this.dom.detailContainer) {
                     this.dom.listContainer.style.display = 'flex';
                     this.dom.detailContainer.style.display = 'none';
@@ -302,14 +242,11 @@ class SearchApp {
             }
         } catch (error) {
             console.error('Search error:', error);
-            if (this.dom.productListUl) {
-                this.dom.productListUl.innerHTML = '<li class="list-group-item text-center text-danger p-4">검색 오류가 발생했습니다.</li>';
-            }
+            if (this.dom.productListUl) this.dom.productListUl.innerHTML = '<li class="list-group-item text-center text-danger p-4">검색 오류가 발생했습니다.</li>';
         }
     }
 
     renderResults(products, showingFavorites, selectedCategory) {
-        // 헤더 업데이트
         if (this.dom.productListHeader) {
             if (showingFavorites) {
                 this.dom.productListHeader.innerHTML = '<i class="bi bi-star-fill me-2 text-warning"></i>즐겨찾기';
@@ -329,6 +266,7 @@ class SearchApp {
         }
 
         products.forEach(p => {
+            // [수정] href는 유지하되 onclick으로 인터셉트
             const html = `
                 <li class="list-group-item p-0">
                     <a href="/product/${p.product_id}" class="product-item d-flex align-items-center text-decoration-none text-body spa-link p-3">
@@ -360,7 +298,7 @@ class SearchApp {
             const a = document.createElement('a');
             a.className = 'page-link shadow-none border-0 text-secondary';
             a.href = '#';
-            a.innerHTML = text; // HTML 허용 (화살표 등)
+            a.innerHTML = text;
             if (!isDisabled && !isActive) {
                 a.onclick = (e) => { e.preventDefault(); this.performSearch(page); };
             }
@@ -386,7 +324,7 @@ class SearchApp {
         ul.appendChild(createItem(currentPage + 1, '&raquo;', false, currentPage === totalPages));
     }
 
-    // 상세 페이지 처리
+    // [중요] 상세 페이지 처리: 우측 패널(iframe)에 표시
     handleProductClick(e) {
         const link = e.target.closest('a.product-item');
         if (!link) return;
@@ -415,7 +353,6 @@ class SearchApp {
     }
 }
 
-// 진입점 (SPA 및 초기 로드 모두 대응)
 const initSearch = () => {
     if (document.querySelector('.search-container')) new SearchApp();
 };

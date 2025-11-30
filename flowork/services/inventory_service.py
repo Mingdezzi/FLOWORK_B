@@ -34,13 +34,18 @@ class InventoryService:
                 if pn_clean not in product_map and pn_clean not in seen_new_pns:
                     if allow_create:
                         pname = item.get('product_name') or item.get('product_number')
+                        # [수정] 초성 자동 생성
+                        choseong = item.get('product_name_choseong')
+                        if not choseong and pname:
+                            choseong = get_choseong(pname)
+
                         new_products_data.append({
                             'brand_id': brand_id,
                             'product_number': item.get('product_number'),
                             'product_name': pname,
                             'product_number_cleaned': pn_clean,
                             'product_name_cleaned': clean_string_upper(pname),
-                            'product_name_choseong': item.get('product_name_choseong'),
+                            'product_name_choseong': choseong, # [중요] DB 저장
                             'release_year': item.get('release_year'),
                             'item_category': item.get('item_category'),
                             'is_favorite': item.get('is_favorite', 0)
@@ -223,13 +228,19 @@ class InventoryService:
                 pn_clean = item.get('product_number_cleaned')
                 if pn_clean and pn_clean not in unique_products:
                     pname = item.get('product_name') or item.get('product_number')
+                    
+                    # [수정] 초성 자동 생성
+                    choseong = item.get('product_name_choseong')
+                    if not choseong and pname:
+                        choseong = get_choseong(pname)
+                    
                     unique_products[pn_clean] = {
                         'brand_id': brand_id,
                         'product_number': item.get('product_number'),
                         'product_name': pname,
                         'product_number_cleaned': pn_clean,
                         'product_name_cleaned': clean_string_upper(pname),
-                        'product_name_choseong': item.get('product_name_choseong'),
+                        'product_name_choseong': choseong, # [중요] DB 저장
                         'release_year': item.get('release_year'),
                         'item_category': item.get('item_category'),
                         'is_favorite': item.get('is_favorite', 0)

@@ -1,11 +1,12 @@
 import traceback
 import os
 import gc
-from flowork.extensions import celery_app, db
+# [수정] extensions에서 celery 임포트 (이름 통일)
+from flowork.extensions import celery, db
 from flowork.services.excel import parse_stock_excel
 from flowork.services.inventory_service import InventoryService
 
-@celery_app.task(bind=True)
+@celery.task(bind=True)
 def task_upsert_inventory(self, file_path, form_data, upload_mode, brand_id, target_store_id, excluded_indices, allow_create):
     """재고 업로드 태스크"""
     # [중요] 앱 컨텍스트 활성화: DB 작업을 위해 필수
@@ -45,7 +46,7 @@ def task_upsert_inventory(self, file_path, form_data, upload_mode, brand_id, tar
                 except: pass
             gc.collect()
 
-@celery_app.task(bind=True)
+@celery.task(bind=True)
 def task_import_db(self, file_path, form_data, brand_id):
     """상품 DB 전체 초기화 태스크"""
     with self.app.flask_app.app_context():
