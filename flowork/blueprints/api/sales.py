@@ -29,7 +29,6 @@ def _get_target_store_id():
 def sales_settings():
     store_id = _get_target_store_id()
     
-    # [수정] 매장이 선택되지 않았을 때 400 에러 대신 빈 설정 반환 (Admin 접근 허용)
     if not store_id: 
         return jsonify({'status': 'success', 'config': {}})
     
@@ -82,7 +81,6 @@ def create_sale():
 @login_required
 def search_sales_products():
     store_id = _get_target_store_id()
-    # [수정] 관리자가 매장을 선택하지 않았더라도 검색은 가능하게 처리 (재고는 0으로 표시)
     
     data = request.json
     query = data.get('query', '').strip()

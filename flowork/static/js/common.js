@@ -1,89 +1,99 @@
-const Flowork = {
-    getCsrfToken: () => {
-        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    },
+if (!window.Flowork) {
+    window.Flowork = {
+        getCsrfToken: () => {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? meta.getAttribute('content') : '';
+        },
 
-    api: async (url, options = {}) => {
-        const defaults = {
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': Flowork.getCsrfToken(),
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        };
-        
-        const settings = { ...defaults, ...options };
-        if (options.headers) {
-            settings.headers = { ...defaults.headers, ...options.headers };
-        }
-
-        try {
-            const response = await fetch(url, settings);
-            const data = await response.json();
+        api: async (url, options = {}) => {
+            const defaults = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.Flowork.getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            };
             
-            if (!response.ok) {
-                throw new Error(data.message || `Server Error: ${response.status}`);
+            const settings = { ...defaults, ...options };
+            if (options.headers) {
+                settings.headers = { ...defaults.headers, ...options.headers };
             }
-            return data;
-        } catch (error) {
-            console.error("API Error:", error);
-            Flowork.toast(error.message, 'danger');
-            throw error;
-        }
-    },
 
-    get: async (url) => {
-        return await Flowork.api(url, { method: 'GET' });
-    },
+            try {
+                const response = await fetch(url, settings);
+                const contentType = response.headers.get("content-type");
+                
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.message || `Server Error: ${response.status}`);
+                    }
+                    return data;
+                } else {
+                    const text = await response.text();
+                    throw new Error(`API Error: Non-JSON response (${response.status})`);
+                }
+            } catch (error) {
+                console.error("API Error:", error);
+                window.Flowork.toast(error.message, 'danger');
+                throw error;
+            }
+        },
 
-    post: async (url, body) => {
-        return await Flowork.api(url, {
-            method: 'POST',
-            body: JSON.stringify(body)
-        });
-    },
+        get: async (url) => {
+            return await window.Flowork.api(url, { method: 'GET' });
+        },
 
-    fmtNum: (num) => {
-        return (num || 0).toLocaleString();
-    },
+        post: async (url, body) => {
+            return await window.Flowork.api(url, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+        },
 
-    fmtDate: (dateObj) => {
-        if (!dateObj) dateObj = new Date();
-        if (typeof dateObj === 'string') dateObj = new Date(dateObj);
-        
-        const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    },
+        fmtNum: (num) => {
+            return (num || 0).toLocaleString();
+        },
 
-    toast: (message, type = 'success') => {
-        const container = document.getElementById('toast-container');
-        if (!container) return alert(message);
+        fmtDate: (dateObj) => {
+            if (!dateObj) dateObj = new Date();
+            if (typeof dateObj === 'string') dateObj = new Date(dateObj);
+            
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        },
 
-        const id = 'toast_' + Date.now();
-        const icon = type === 'success' ? 'check-circle-fill' : (type === 'danger' ? 'exclamation-circle-fill' : 'info-circle-fill');
-        const color = type === 'success' ? 'text-success' : (type === 'danger' ? 'text-danger' : 'text-info');
+        toast: (message, type = 'success') => {
+            const container = document.getElementById('toast-container');
+            if (!container) return alert(message);
 
-        const html = `
-            <div id="${id}" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body d-flex align-items-center">
-                        <i class="bi bi-${icon} ${color} fs-5 me-2"></i>
-                        <span>${message}</span>
+            const id = 'toast_' + Date.now();
+            const icon = type === 'success' ? 'check-circle-fill' : (type === 'danger' ? 'exclamation-circle-fill' : 'info-circle-fill');
+            const color = type === 'success' ? 'text-success' : (type === 'danger' ? 'text-danger' : 'text-info');
+
+            const html = `
+                <div id="${id}" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body d-flex align-items-center">
+                            <i class="bi bi-${icon} ${color} fs-5 me-2"></i>
+                            <span>${message}</span>
+                        </div>
+                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                     </div>
-                    <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
-            </div>
-        `;
-        
-        container.insertAdjacentHTML('beforeend', html);
-        const toastEl = document.getElementById(id);
-        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
-        toast.show();
-
-        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-    }
-};
-
-window.Flowork = Flowork;
+            `;
+            
+            container.insertAdjacentHTML('beforeend', html);
+            const toastEl = document.getElementById(id);
+            if (typeof bootstrap !== 'undefined') {
+                const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+                toast.show();
+                toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+            } else {
+                setTimeout(() => toastEl.remove(), 3000);
+            }
+        }
+    };
+}

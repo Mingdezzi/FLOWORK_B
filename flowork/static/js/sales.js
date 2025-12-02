@@ -83,7 +83,7 @@ class SalesApp {
         const lastMonth = new Date();
         lastMonth.setMonth(today.getMonth() - 1);
         if(this.dom.refundEnd) this.dom.refundEnd.value = todayStr;
-        if(this.dom.refundStart) this.dom.refundStart.value = Flowork.fmtDate(lastMonth);
+        if(this.dom.refundStart) this.dom.refundStart.value = window.Flowork.fmtDate(lastMonth);
 
         this.loadSettings();
 
@@ -143,7 +143,7 @@ class SalesApp {
         if (this.targetStoreId) {
             data.target_store_id = this.targetStoreId;
         }
-        return await Flowork.post(url, data);
+        return await window.Flowork.post(url, data);
     }
     
     async loadSettings() {
@@ -152,7 +152,7 @@ class SalesApp {
             if (this.targetStoreId) {
                 url += (url.includes('?') ? '&' : '?') + 'target_store_id=' + this.targetStoreId;
             }
-            const data = await Flowork.get(url);
+            const data = await window.Flowork.get(url);
             if (data.status === 'success') this.config = data.config;
         } catch (e) { console.error("Settings Load Failed", e); }
     }
@@ -188,7 +188,7 @@ class SalesApp {
         if (!query) return;
 
         if (!this.targetStoreId && this.dom.storeSelect && !this.dom.storeSelect.value) {
-            Flowork.toast('매장을 먼저 선택해주세요.', 'warning');
+            window.Flowork.toast('매장을 먼저 선택해주세요.', 'warning');
             this.dom.storeSelect.focus();
             return;
         }
@@ -256,7 +256,7 @@ class SalesApp {
                     <td>${v.color}</td>
                     <td><b>${v.size}</b></td>
                     <td class="${v.stock <= 0 ? 'text-danger' : 'text-primary'} fw-bold">${v.stock}</td>
-                    <td>${Flowork.fmtNum(v.sale_price)}</td>
+                    <td>${window.Flowork.fmtNum(v.sale_price)}</td>
                     <td><button class="btn btn-sm btn-primary btn-add py-0">추가</button></td>
                 `;
                 const addHandler = () => {
@@ -300,7 +300,7 @@ class SalesApp {
                     <td>${rec.receipt_number.split(' ')[1]}</td>
                     <td>${rec.product_number}</td>
                     <td>${rec.size}</td>
-                    <td class="text-end">${Flowork.fmtNum(rec.total_amount)}</td>
+                    <td class="text-end">${window.Flowork.fmtNum(rec.total_amount)}</td>
                 `;
                 tr.onclick = async () => {
                     await this.loadRefundCart(rec.sale_id, rec.receipt_number);
@@ -318,7 +318,7 @@ class SalesApp {
             if (this.targetStoreId) {
                 url += (url.includes('?') ? '&' : '?') + 'target_store_id=' + this.targetStoreId;
             }
-            const data = await Flowork.get(url);
+            const data = await window.Flowork.get(url);
             
             if (data.status === 'success') {
                 this.refundSaleId = saleId;
@@ -336,7 +336,7 @@ class SalesApp {
                 }));
                 this.renderCart();
             }
-        } catch (e) { Flowork.toast('불러오기 실패', 'danger'); }
+        } catch (e) { window.Flowork.toast('불러오기 실패', 'danger'); }
     }
 
     addToCart(item) {
@@ -382,7 +382,7 @@ class SalesApp {
                     <div class="small text-muted">${item.product_number}</div>
                 </td>
                 <td>${item.color}/${item.size}</td>
-                <td class="text-end small">${Flowork.fmtNum(sale)}</td>
+                <td class="text-end small">${window.Flowork.fmtNum(sale)}</td>
                 <td><input type="tel" class="cart-input disc-in" value="${item.discount_amount}" data-idx="${idx}"></td>
                 <td><input type="tel" class="cart-input qty-in" value="${item.quantity}" data-idx="${idx}"></td>
                 <td><i class="bi bi-x-circle text-danger btn-del" style="cursor:pointer;" data-idx="${idx}"></i></td>
@@ -390,8 +390,8 @@ class SalesApp {
             tbody.appendChild(tr);
         });
 
-        this.dom.totalQty.textContent = Flowork.fmtNum(totalQty);
-        this.dom.totalAmt.textContent = Flowork.fmtNum(totalAmt);
+        this.dom.totalQty.textContent = window.Flowork.fmtNum(totalQty);
+        this.dom.totalAmt.textContent = window.Flowork.fmtNum(totalAmt);
         
         if (this.dom.mobileCartBadge) this.dom.mobileCartBadge.textContent = totalQty;
 
@@ -426,7 +426,7 @@ class SalesApp {
                 this.renderCart();
             }
         } else {
-            if (this.cart.length === 0) return Flowork.toast('상품이 없습니다.', 'warning');
+            if (this.cart.length === 0) return window.Flowork.toast('상품이 없습니다.', 'warning');
             this.heldCart = JSON.stringify(this.cart);
             this.cart = [];
             btn.textContent = '복원';
@@ -436,7 +436,7 @@ class SalesApp {
     }
 
     applyAutoDiscount() {
-        if (this.cart.length === 0) return Flowork.toast('상품이 없습니다.', 'warning');
+        if (this.cart.length === 0) return window.Flowork.toast('상품이 없습니다.', 'warning');
         const currentTotal = this.cart.reduce((sum, i) => sum + (i.sale_price * i.quantity), 0);
         
         let rule = null;
@@ -445,16 +445,16 @@ class SalesApp {
         }
 
         if (rule) {
-            Flowork.toast(`${Flowork.fmtNum(rule.limit)}원 이상: ${Flowork.fmtNum(rule.discount)}원 할인`, 'success');
+            window.Flowork.toast(`${window.Flowork.fmtNum(rule.limit)}원 이상: ${window.Flowork.fmtNum(rule.discount)}원 할인`, 'success');
             this.cart[0].discount_amount += rule.discount;
             this.renderCart();
         } else {
-            Flowork.toast('적용 가능한 할인 규칙이 없습니다.', 'info');
+            window.Flowork.toast('적용 가능한 할인 규칙이 없습니다.', 'info');
         }
     }
 
     async submitSale() {
-        if (this.cart.length === 0) return Flowork.toast('상품이 없습니다.', 'warning');
+        if (this.cart.length === 0) return window.Flowork.toast('상품이 없습니다.', 'warning');
         if (!confirm('판매를 등록하시겠습니까?')) return;
 
         try {
@@ -471,29 +471,29 @@ class SalesApp {
 
             const res = await this.post(this.urls.submitSales, payload);
             if (res.status === 'success') {
-                Flowork.toast('판매 등록 완료', 'success');
+                window.Flowork.toast('판매 등록 완료', 'success');
                 this.cart = []; 
                 this.renderCart();
             } else {
-                Flowork.toast(res.message, 'danger');
+                window.Flowork.toast(res.message, 'danger');
             }
-        } catch (e) { Flowork.toast('등록 실패', 'danger'); }
+        } catch (e) { window.Flowork.toast('등록 실패', 'danger'); }
     }
 
     async submitRefund() {
-        if (!this.refundSaleId) return Flowork.toast('환불할 영수증을 선택하세요.', 'warning');
+        if (!this.refundSaleId) return window.Flowork.toast('환불할 영수증을 선택하세요.', 'warning');
         if (!confirm('전체 환불 처리하시겠습니까?')) return;
 
         try {
             const url = this.urls.refund.replace('999999', this.refundSaleId);
             const res = await this.post(url, {});
             if (res.status === 'success') {
-                Flowork.toast('환불 완료', 'success');
+                window.Flowork.toast('환불 완료', 'success');
                 this.resetRefund();
             } else {
-                Flowork.toast(res.message, 'danger');
+                window.Flowork.toast(res.message, 'danger');
             }
-        } catch (e) { Flowork.toast('오류 발생', 'danger'); }
+        } catch (e) { window.Flowork.toast('오류 발생', 'danger'); }
     }
 
     resetRefund() {
