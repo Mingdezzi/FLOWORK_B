@@ -7,10 +7,13 @@
     --content-max-width: 1600px;
 }
 
-body {
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
     background-color: var(--bs-body-bg);
     letter-spacing: -0.02em;
-    overflow-y: hidden; 
+    overflow: hidden;
 }
 
 .main-content-wrapper {
@@ -35,10 +38,23 @@ body {
 
 #page-container-wrapper {
     flex-grow: 1;
-    overflow-y: auto;
+    overflow-y: hidden;
     background-color: var(--bs-body-bg);
     position: relative;
-    padding: 1.5rem !important;
+    padding: 0 !important;
+}
+
+.page-content-layer {
+    height: 100%;
+    overflow-y: auto;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.unique-content-area {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
 }
 
 .main-content-wrapper .container, 
@@ -47,13 +63,16 @@ body {
     max-width: var(--content-max-width) !important;
     margin-left: auto !important;
     margin-right: auto !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 @media (max-width: 576px) {
-    #page-container-wrapper {
-        padding: 1rem !important;
+    .unique-content-area {
+        padding: 0.5rem;
     }
 }
 
@@ -62,6 +81,7 @@ body {
     box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     border-radius: 8px;
     margin-bottom: 1rem;
+    background-color: #fff;
 }
 
 .card-header {
@@ -166,11 +186,6 @@ body {
 .chrome-tab-close:hover {
     background-color: #ced4da;
     opacity: 1;
-}
-
-.page-content-layer {
-    height: 100%;
-    animation: fadeIn 0.2s ease-out;
 }
 
 @keyframes fadeIn {

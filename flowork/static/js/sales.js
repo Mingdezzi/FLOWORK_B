@@ -407,7 +407,9 @@ if (!window.SalesApp) {
                     <td class="text-end small">${window.Flowork.fmtNum(sale)}</td>
                     <td><input type="tel" class="cart-input disc-in" value="${item.discount_amount}" data-idx="${idx}"></td>
                 <td><input type="tel" class="cart-input qty-in" value="${item.quantity}" data-idx="${idx}"></td>
-                <td><i class="bi bi-x-circle text-danger btn-del" style="cursor:pointer;" data-idx="${idx}"></i></td>
+                <td>
+                    <button type="button" class="btn btn-outline-danger btn-sm py-2 btn-del" style="width: 50px; font-weight:bold;" data-idx="${idx}">삭제</button>
+                </td>
             `;
             tbody.appendChild(tr);
         });

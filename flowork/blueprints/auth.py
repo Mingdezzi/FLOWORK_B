@@ -13,24 +13,20 @@ def login():
         brand_id_str = request.form.get('brand_id')
         username = request.form.get('username')
         password = request.form.get('password')
+        remember = True if request.form.get('remember') == 'on' else False
         
         user = None
         
         if not brand_id_str:
-            # 브랜드 미선택 시: 슈퍼 관리자 로그인 시도
             if username == 'superadmin':
                 user = User.query.filter_by(is_super_admin=True, username='superadmin').first()
             else:
-                # 일반 유저가 브랜드를 선택하지 않은 경우
                 flash('브랜드를 선택해주세요.', 'warning')
                 brands = Brand.query.order_by(Brand.brand_name).all()
                 return render_template('login.html', brands=brands)
         else:
-            # 브랜드 관리자/매장 관리자 로그인
             try:
                 brand_id = int(brand_id_str)
-                # [수정] is_super_admin=False 제거 (DB 컬럼이 아니므로 filter_by에서 사용 불가)
-                # brand_id가 존재하면 슈퍼관리자가 아니므로 조건 불필요
                 user = User.query.filter_by(
                     username=username, 
                     brand_id=brand_id
@@ -45,7 +41,7 @@ def login():
                 flash('잘못된 브랜드 값입니다.', 'error')
 
         if user and user.check_password(password):
-            login_user(user) 
+            login_user(user, remember=remember) 
             flash('로그인 성공!', 'success')
             next_page = request.args.get('next')
             return redirect(next_page or url_for('ui.home'))
@@ -73,7 +69,7 @@ def register_brand():
         try:
             brand_name = request.form.get('brand_name')
             password = request.form.get('password')
-            username = 'admin' # 브랜드 관리자는 항상 admin
+            username = 'admin' 
 
             if not all([brand_name, password]):
                 flash('브랜드명과 비밀번호를 모두 입력해야 합니다.', 'error')

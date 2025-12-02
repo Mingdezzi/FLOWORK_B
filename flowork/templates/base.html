@@ -15,10 +15,10 @@
     
     {% if is_partial %}
     <style>
-        body { background-color: #fff !important; overflow-y: auto !important; }
-        .main-content-wrapper { margin-left: 0 !important; height: auto !important; padding-bottom: 0 !important; }
-        #page-container-wrapper { padding: 1rem !important; height: auto !important; overflow: visible !important; }
-        .container, .container-fluid { max-width: 100% !important; padding-left: 5px !important; padding-right: 5px !important; }
+        body { background-color: #fff !important; overflow-y: auto !important; height: 100% !important; }
+        .main-content-wrapper { margin-left: 0 !important; height: 100% !important; padding-bottom: 0 !important; }
+        #page-container-wrapper { padding: 1rem !important; height: 100% !important; overflow: visible !important; }
+        .container, .container-fluid { max-width: 100% !important; padding-left: 5px !important; padding-right: 5px !important; height: 100%; display: flex; flex-direction: column; }
     </style>
     {% endif %}
 </head>
@@ -108,35 +108,41 @@
                 container: document.getElementById('dynamic-tabs-container'),
                 pageWrapper: document.getElementById('page-container-wrapper'),
                 loader: document.querySelector('.spa-loader .bar'),
-                isInitRun: false, // [수정] 중복 실행 방지 플래그
+                isInitRun: false,
 
                 init() {
-                    // [수정] 이미 초기화되었거나 요소가 없으면 중단 (오류 방지)
                     if (this.isInitRun) return;
-                    const initialContentEl = document.getElementById('initial-page-content');
-                    if (!initialContentEl) return;
-
                     this.isInitRun = true;
+
                     const initialUrl = window.location.pathname + window.location.search;
+                    const initialContentEl = document.getElementById('initial-page-content');
                     
-                    let initialTitle = document.title.replace('FLOWORK - ', '').trim();
-                    let isClosable = true;
+                    this.loadTabsFromStorage();
 
-                    if (window.location.pathname === '/' || window.location.pathname === '/home') {
-                        initialTitle = "대시보드";
-                        isClosable = false;
-                    } else {
-                        const activeLink = document.querySelector(`.sidebar-desktop a[href="${window.location.pathname}"]`);
-                        if (activeLink) initialTitle = activeLink.innerText.trim();
+                    let currentTab = this.tabs.find(t => t.url === initialUrl);
+                    if (!currentTab) {
+                        let initialTitle = document.title.replace('FLOWORK - ', '').trim();
+                        let isClosable = true;
+
+                        if (window.location.pathname === '/' || window.location.pathname === '/home') {
+                            initialTitle = "대시보드";
+                            isClosable = false;
+                        } else {
+                            const activeLink = document.querySelector(`.sidebar-desktop a[href="${window.location.pathname}"]`);
+                            if (activeLink) initialTitle = activeLink.innerText.trim();
+                        }
+
+                        const tabId = this.generateId();
+                        currentTab = { id: tabId, url: initialUrl, title: initialTitle, isClosable: isClosable };
+                        this.tabs.push(currentTab);
                     }
-                    
-                    const tabId = this.generateId();
-                    initialContentEl.id = `page-${tabId}`;
-                    
-                    this.addTabUI(tabId, initialTitle, initialUrl, isClosable);
-                    this.tabs.push({ id: tabId, url: initialUrl, title: initialTitle, isClosable: isClosable });
-                    this.activateTab(tabId);
 
+                    if (initialContentEl) {
+                        initialContentEl.id = `page-${currentTab.id}`;
+                    }
+
+                    this.renderTabsUI();
+                    this.activateTab(currentTab.id, false);
                     this.bindEvents();
                 },
 
@@ -184,6 +190,46 @@
 
                 generateId() {
                     return 'tab_' + Math.random().toString(36).substr(2, 9);
+                },
+
+                saveTabsToStorage() {
+                    const tabsToSave = this.tabs.map(t => ({
+                        id: t.id,
+                        url: t.url,
+                        title: t.title,
+                        isClosable: t.isClosable
+                    }));
+                    localStorage.setItem('flowork_tabs', JSON.stringify(tabsToSave));
+                },
+
+                loadTabsFromStorage() {
+                    const saved = localStorage.getItem('flowork_tabs');
+                    if (saved) {
+                        try {
+                            const parsed = JSON.parse(saved);
+                            if (Array.isArray(parsed)) {
+                                this.tabs = parsed;
+                            }
+                        } catch(e) {
+                            console.error("Tab storage parse error", e);
+                        }
+                    }
+                },
+
+                renderTabsUI() {
+                    this.container.innerHTML = '';
+                    this.tabs.forEach(tab => {
+                        this.addTabUI(tab.id, tab.title, tab.url, tab.isClosable);
+                        
+                        let contentEl = document.getElementById(`page-${tab.id}`);
+                        if (!contentEl) {
+                            contentEl = document.createElement('div');
+                            contentEl.id = `page-${tab.id}`;
+                            contentEl.className = 'page-content-layer';
+                            contentEl.style.display = 'none';
+                            this.pageWrapper.appendChild(contentEl);
+                        }
+                    });
                 },
 
                 open(url, title, pushState = true) {
@@ -260,16 +306,19 @@
                 createNewTab(url, title, contentHtml, isClosable) {
                     const id = this.generateId();
                     this.tabs.push({ id, url, title, isClosable });
+                    this.saveTabsToStorage();
                     this.addTabUI(id, title, url, isClosable);
 
-                    const contentEl = document.createElement('div');
-                    contentEl.id = `page-${id}`;
-                    contentEl.className = 'page-content-layer';
-                    contentEl.style.display = 'none';
+                    let contentEl = document.getElementById(`page-${id}`);
+                    if (!contentEl) {
+                        contentEl = document.createElement('div');
+                        contentEl.id = `page-${id}`;
+                        contentEl.className = 'page-content-layer';
+                        this.pageWrapper.appendChild(contentEl);
+                    }
                     contentEl.innerHTML = `<div class="unique-content-area">${contentHtml}</div>`;
-                    this.pageWrapper.appendChild(contentEl);
-
-                    this.activateTab(id);
+                    
+                    this.activateTab(id, false); 
                 },
 
                 addTabUI(id, title, url, isClosable) {
@@ -294,7 +343,7 @@
                     this.container.appendChild(tabEl);
                 },
 
-                activateTab(id) {
+                activateTab(id, pushState = true) {
                     this.activeTabId = id;
 
                     this.container.querySelectorAll('.chrome-tab').forEach(el => {
@@ -302,14 +351,22 @@
                     });
 
                     this.pageWrapper.querySelectorAll('.page-content-layer').forEach(el => {
-                        el.style.display = el.id === `page-${id}` ? 'block' : 'none';
+                        if (el.id === `page-${id}`) {
+                            el.style.display = 'block';
+                            if (el.innerHTML.trim() === '') {
+                                const tab = this.tabs.find(t => t.id === id);
+                                if(tab) this.fetchPage(tab.url, tab.title, tab.isClosable);
+                            }
+                        } else {
+                            el.style.display = 'none';
+                        }
                     });
 
                     const tab = this.tabs.find(t => t.id === id);
                     if (tab) {
                         document.title = `FLOWORK - ${tab.title}`;
                         this.updateNavHighlight(tab.url);
-                        history.replaceState(null, '', tab.url);
+                        if(pushState) history.replaceState(null, '', tab.url);
                     }
                 },
 
@@ -326,6 +383,7 @@
                     if (contentEl) contentEl.remove();
 
                     this.tabs.splice(idx, 1);
+                    this.saveTabsToStorage();
 
                     if (this.activeTabId === id) {
                         if (this.tabs.length > 0) {
