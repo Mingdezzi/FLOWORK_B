@@ -13,12 +13,13 @@ html, body {
     padding: 0;
     background-color: var(--bs-body-bg);
     letter-spacing: -0.02em;
-    overflow: hidden;
+    overflow: hidden; /* 전체 페이지 스크롤 방지 */
 }
 
+/* 메인 레이아웃 */
 .main-content-wrapper {
     height: 100vh;
-    overflow-y: hidden;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
 }
@@ -32,31 +33,38 @@ html, body {
 @media (max-width: 991.98px) {
     .main-content-wrapper {
         margin-left: 0;
-        padding-bottom: 60px; 
+        padding-bottom: 60px; /* 하단 네비게이션 높이 확보 */
     }
 }
 
 #page-container-wrapper {
     flex-grow: 1;
-    overflow-y: hidden;
+    overflow: hidden; /* 내부 레이어가 스크롤 담당 */
     background-color: var(--bs-body-bg);
     position: relative;
     padding: 0 !important;
 }
 
+/* 탭별 컨텐츠 레이어 */
 .page-content-layer {
     height: 100%;
-    overflow-y: auto;
+    overflow-y: auto; /* 기본적으로 세로 스크롤 허용 */
+    display: flex;
+    flex-direction: column;
     animation: fadeIn 0.2s ease-out;
 }
 
+/* 페이지 내부 컨텐츠 영역 */
 .unique-content-area {
-    height: 100%;
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
     padding: 1rem;
+    height: 100%; /* 부모 높이 상속 */
+    box-sizing: border-box;
 }
 
+/* 일반 컨테이너 재정의 */
 .main-content-wrapper .container, 
 .main-content-wrapper .container-fluid {
     width: 100% !important;
@@ -65,6 +73,7 @@ html, body {
     margin-right: auto !important;
     padding-left: 5px !important;
     padding-right: 5px !important;
+    /* Flex 아이템으로 동작하여 높이 채우기 */
     flex-grow: 1;
     display: flex;
     flex-direction: column;
@@ -72,16 +81,24 @@ html, body {
 
 @media (max-width: 576px) {
     .unique-content-area {
-        padding: 0.5rem;
+        padding: 0.5rem; /* 모바일에서는 여백 축소 */
     }
 }
 
+/* 공통 UI 요소 */
 .card {
     border: none;
     box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     border-radius: 8px;
     margin-bottom: 1rem;
     background-color: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-body {
+    flex: 1 1 auto;
+    overflow: auto; /* 카드 내부 스크롤 */
 }
 
 .card-header {
@@ -90,6 +107,11 @@ html, body {
     font-weight: 600;
     padding: 0.8rem 1rem;
     font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.card-footer {
+    flex-shrink: 0;
 }
 
 .table td, .table th {
@@ -111,6 +133,7 @@ html, body {
     border-color: #eb6864;
 }
 
+/* 탭 스타일 */
 .chrome-tabs-shell {
     background: #e3e5e8;
     padding: 8px 8px 0 8px;
@@ -217,6 +240,7 @@ html, body {
     transition: width 0.2s;
 }
 
+/* 사이드바 */
 .sidebar-desktop .list-group-item {
     border: none;
     padding: 0.6rem 1rem;
@@ -235,15 +259,75 @@ html, body {
     font-weight: 600;
 }
 
-.sticky-col {
-    position: sticky;
-    background-color: #fff !important;
-    z-index: 2;
+/* Sales 페이지 전용 스타일 */
+.sales-container {
+    height: 100%;
+    overflow: hidden; /* 내부 패널이 스크롤 */
+    display: flex;
+    flex-direction: column;
 }
-.sticky-col.second-col {
-    left: 80px;
-    z-index: 2;
-    border-right: 1px solid #dee2e6;
+
+.sales-container .row {
+    flex-grow: 1;
+    overflow: hidden; /* row 자체 스크롤 방지 */
+}
+
+/* 패널 공통 */
+.sales-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* 부모 row 높이 가득 채우기 */
+    overflow: hidden;
+}
+
+/* 테이블/리스트 스크롤 영역 */
+.left-table-wrapper, .cart-table-wrapper {
+    flex-grow: 1;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #fff;
+    min-height: 0; /* Flex 자식 스크롤 필수 */
+}
+
+/* 반응형 (PC 및 가로모드 모바일) */
+@media (min-width: 992px), (orientation: landscape) and (min-width: 576px) {
+    /* 가로모드이거나 PC일 때 탭 숨김 */
+    .mobile-sales-tabs {
+        display: none !important;
+    }
+    
+    /* 두 패널 모두 표시 */
+    .sales-panel {
+        display: flex !important;
+        height: 100%;
+    }
+    
+    #sales-left-panel, #sales-right-panel {
+        display: flex !important;
+    }
+    
+    /* 레이아웃 분할 (Bootstrap col 오버라이드 또는 보완) */
+    .sales-container .row > .col-lg-5,
+    .sales-container .row > .col-lg-7 {
+        height: 100%;
+    }
+}
+
+/* 모바일 세로모드 */
+@media (max-width: 991.98px) and (orientation: portrait) {
+    /* 선택되지 않은 패널 숨김 */
+    .sales-panel:not(.active) {
+        display: none !important;
+    }
+    .sales-panel.active {
+        display: flex !important;
+        height: calc(100% - 50px); /* 탭 높이 제외 */
+    }
+    .mobile-sales-tabs {
+        display: flex !important;
+        flex-shrink: 0;
+    }
 }
 
 @media (max-width: 576px) {
@@ -252,110 +336,25 @@ html, body {
     }
 }
 
+/* Keypad & 기타 */
 .keypad-hidden { display: none !important; }
+.keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.keypad-btn { height: 55px; font-size: 1.2rem; font-weight: 500; border: 1px solid #dee2e6; border-radius: 6px; background-color: #fff; color: #212529; display: flex; align-items: center; justify-content: center; }
+.keypad-btn:active { background-color: #e9ecef; }
+.keypad-qwerty { display: flex; flex-direction: column; gap: 5px; }
+.qwerty-row { display: flex; gap: 4px; width: 100%; justify-content: center; }
+.qwerty-key { flex-grow: 1; height: 55px; padding: 0; font-size: 1.1rem; font-weight: 500; border: 1px solid #dee2e6; background-color: #fff; color: #212529; border-radius: 4px; }
+.qwerty-key:active { background-color: #ced4da; }
+.qwerty-key.key-special { background-color: #f8f9fa; font-size: 0.9rem; font-weight: bold; color: #495057; flex-grow: 1.5; }
+.qwerty-key.key-special.active { background-color: #eb6864; border-color: #eb6864; color: white; }
+.qwerty-row-bottom { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 5px; }
+.qwerty-row-bottom .keypad-btn { height: 55px; font-size: 1rem; width: 100%; }
 
-.keypad-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
-}
+#category-bar .category-btn { font-size: 0.85rem; padding: 0.5rem 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#category-bar .category-btn.active { background-color: #eb6864; border-color: #eb6864; color: white; }
 
-.keypad-btn {
-    height: 55px;
-    font-size: 1.2rem;
-    font-weight: 500;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    background-color: #fff;
-    color: #212529;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.keypad-btn:active {
-    background-color: #e9ecef;
-}
-
-.keypad-grid .keypad-btn[data-key="backspace"] { grid-column: 1 / 2; font-size: 1.1rem; background-color: #f8f9fa; }
-.keypad-grid .keypad-btn[data-key="0"] { grid-column: 2 / 3; }
-.keypad-grid .keypad-btn[data-key="mode-kor"] { grid-column: 3 / 4; font-size: 1rem; background-color: #eb6864; color: white; border-color: #eb6864; }
-
-.keypad-qwerty {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.qwerty-row {
-    display: flex;
-    gap: 4px;
-    width: 100%;
-    justify-content: center;
-}
-
-.qwerty-key {
-    flex-grow: 1;
-    height: 55px;
-    padding: 0;
-    font-size: 1.1rem;
-    font-weight: 500;
-    border: 1px solid #dee2e6;
-    background-color: #fff;
-    color: #212529;
-    border-radius: 4px;
-}
-
-.qwerty-key:active {
-    background-color: #ced4da;
-}
-
-.qwerty-key.key-special {
-    background-color: #f8f9fa;
-    font-size: 0.9rem;
-    font-weight: bold;
-    color: #495057;
-    flex-grow: 1.5;
-}
-
-.qwerty-key.key-special.active {
-    background-color: #eb6864;
-    border-color: #eb6864;
-    color: white;
-}
-
-.qwerty-row-bottom {
-    display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
-    gap: 5px;
-}
-
-.qwerty-row-bottom .keypad-btn {
-    height: 55px;
-    font-size: 1rem;
-    width: 100%;
-}
-
-#category-bar .category-btn {
-    font-size: 0.85rem;
-    padding: 0.5rem 0.2rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-#category-bar .category-btn.active {
-    background-color: #eb6864;
-    border-color: #eb6864;
-    color: white;
-}
-
-.stock-table th, .stock-table td {
-    text-align: center;
-    vertical-align: middle;
-}
-.variant-edit-input {
-    text-align: center;
-}
+.stock-table th, .stock-table td { text-align: center; vertical-align: middle; }
+.variant-edit-input { text-align: center; }
 .view-field { display: table-cell; }
 .edit-field { display: none; }
 body.edit-mode .edit-field { display: table-cell; }
@@ -363,16 +362,3 @@ body.edit-mode .view-field { display: none; }
 body.edit-mode .stock-control .button-stack { display: none; }
 body.edit-mode .btn-toggle-actual-stock { display: none; }
 body.edit-mode #add-variant-row { display: table-row; }
-
-@media (min-width: 992px) {
-    .sales-container .row {
-        height: 100%;
-    }
-    .sales-panel {
-        height: 100%;
-        overflow: hidden;
-    }
-    .sales-left, .sales-right {
-        display: flex !important; 
-    }
-}
