@@ -20,7 +20,7 @@ class OrderApp {
             resultsDiv: this.container.querySelector('#product-search-results'),
             processingBody: this.container.querySelector('#processing-table-body'),
             btnAddRow: this.container.querySelector('#btn-add-processing-row'),
-            rowTemplate: document.getElementById('processing-row-template'), // 템플릿은 전역 ID여도 상관없음(내용만 복사하므로)
+            rowTemplate: document.getElementById('processing-row-template'),
             btnDeleteOrder: this.container.querySelector('#btn-delete-order'),
             formOrder: this.container.querySelector('#order-form'),
             formDelete: this.container.querySelector('#delete-order-form'),
@@ -30,7 +30,6 @@ class OrderApp {
             address2Input: this.container.querySelector('#address2')
         };
         
-        // 데이터셋 읽기
         this.urls = {
             lookup: this.container.dataset.productLookupUrl,
             search: this.container.dataset.productSearchUrl
@@ -41,6 +40,9 @@ class OrderApp {
             size: this.container.dataset.currentSize
         };
 
+        // [신규] 이벤트 핸들러 바인딩 (참조 유지를 위해)
+        this.globalClickHandler = this.handleGlobalClick.bind(this);
+
         this.init();
     }
 
@@ -50,6 +52,10 @@ class OrderApp {
         
         if(this.dom.btnSearchAddress) {
             this.dom.btnSearchAddress.addEventListener('click', () => {
+                if (typeof daum === 'undefined' || !daum.Postcode) {
+                    Flowork.toast('주소 검색 서비스를 로드 중입니다. 잠시 후 시도해주세요.', 'warning');
+                    return;
+                }
                 new daum.Postcode({
                     oncomplete: (data) => {
                         this.dom.postcodeInput.value = data.zonecode;
@@ -78,15 +84,8 @@ class OrderApp {
             if(this.dom.pnInput.value) this.fetchProductOptions(this.dom.pnInput.value);
         }
 
-        document.addEventListener('click', (e) => {
-            if (!this.container.contains(e.target)) {
-                 if (this.dom.resultsDiv) this.dom.resultsDiv.style.display = 'none';
-            } else {
-                 if (this.dom.pnInput && !this.dom.pnInput.closest('.position-relative').contains(e.target)) {
-                     this.dom.resultsDiv.style.display = 'none';
-                 }
-            }
-        });
+        // [수정] 글로벌 이벤트 등록 (중복 방지 로직 포함)
+        document.addEventListener('click', this.globalClickHandler);
 
         if(this.dom.btnAddRow) this.dom.btnAddRow.addEventListener('click', () => this.addProcessingRow());
         if(this.dom.processingBody) {
@@ -124,6 +123,22 @@ class OrderApp {
         this.toggleStatusFields();
     }
 
+    // [신규] 글로벌 클릭 핸들러 (DOM에서 컨테이너가 사라지면 이벤트도 해제)
+    handleGlobalClick(e) {
+        if (!document.body.contains(this.container)) {
+            document.removeEventListener('click', this.globalClickHandler);
+            return;
+        }
+
+        if (!this.container.contains(e.target)) {
+             if (this.dom.resultsDiv) this.dom.resultsDiv.style.display = 'none';
+        } else {
+             if (this.dom.pnInput && !this.dom.pnInput.closest('.position-relative').contains(e.target)) {
+                 if (this.dom.resultsDiv) this.dom.resultsDiv.style.display = 'none';
+             }
+        }
+    }
+
     toggleAddressFields() {
         if(!this.dom.receptionToggles) return;
         const selected = this.dom.receptionToggles.querySelector('input:checked');
@@ -154,7 +169,7 @@ class OrderApp {
         const query = this.dom.pnInput.value.trim();
         if(!query) {
             Flowork.toast('검색어를 입력하세요.', 'warning');
-            this.dom.resultsDiv.style.display = 'none';
+            if(this.dom.resultsDiv) this.dom.resultsDiv.style.display = 'none';
             return;
         }
 

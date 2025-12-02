@@ -14,11 +14,9 @@ from flowork.services.sales_service import SalesService
 from . import api_bp
 
 def _get_target_store_id():
-    """요청에서 target_store_id를 추출하거나 현재 사용자의 매장 ID 사용"""
     if current_user.store_id:
         return current_user.store_id
     
-    # 관리자일 경우 request JSON이나 args에서 확인
     if current_user.is_admin or current_user.is_super_admin:
         if request.is_json:
             return request.json.get('target_store_id')
@@ -93,13 +91,18 @@ def search_sales_products():
     q_clean = clean_string_upper(query)
     search_filter = or_(
         Product.product_number_cleaned.contains(q_clean),
-        Product.product_name_cleaned.contains(q_clean)
+        Product.product_name_cleaned.contains(q_clean),
+        Product.product_number.ilike(f"%{query}%"),
+        Product.product_name.ilike(f"%{query}%")
     )
 
     if mode == 'detail_stock':
         product = Product.query.filter(
             Product.brand_id == current_user.current_brand_id,
-            Product.product_number == query 
+            or_(
+                Product.product_number == query,
+                Product.product_number_cleaned == q_clean
+            )
         ).first()
         
         if not product: return jsonify({'status': 'error', 'variants': []})

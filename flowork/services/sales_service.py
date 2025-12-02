@@ -20,12 +20,16 @@ class SalesService:
                                   .order_by(Sale.daily_number.desc()).first()
             next_num = (last_sale.daily_number + 1) if last_sale else 1
             
+            date_prefix = sale_date.strftime('%Y%m%d')
+            receipt_number = f"{date_prefix}-{store_id}-{next_num:04d}"
+
             new_sale = Sale(
                 store_id=store_id,
                 user_id=user_id,
                 payment_method=payment_method,
                 sale_date=sale_date,
                 daily_number=next_num,
+                receipt_number=receipt_number,
                 status=SaleStatus.VALID,
                 is_online=is_online
             )

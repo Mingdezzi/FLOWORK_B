@@ -7,7 +7,12 @@ class Sale(db.Model):
     store_id = db.Column(db.Integer, db.ForeignKey('stores.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     
+    # [수정] 영수증 번호 생성 규칙에 필수적인 컬럼이므로 유지
     receipt_number = db.Column(db.String(50), unique=True, nullable=False)
+    
+    # [신규] 서비스 로직에서 사용하는 일일 순번 컬럼 추가 (누락되었던 부분)
+    daily_number = db.Column(db.Integer, nullable=False, default=1)
+    
     sale_date = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     

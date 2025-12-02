@@ -1,6 +1,5 @@
 class SalesApp {
     constructor() {
-        // 초기화되지 않은 컨테이너 찾기
         this.container = document.querySelector('.sales-container:not([data-initialized])');
         if (!this.container) return;
         this.container.dataset.initialized = "true";
@@ -71,11 +70,18 @@ class SalesApp {
         }
 
         const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+
+        if(this.dom.saleDate) {
+            this.dom.saleDate.value = todayStr;
+        }
+
         const lastMonth = new Date();
         lastMonth.setMonth(today.getMonth() - 1);
-        
-        if(this.dom.saleDate) this.dom.saleDate.value = Flowork.fmtDate(today);
-        if(this.dom.refundEnd) this.dom.refundEnd.value = Flowork.fmtDate(today);
+        if(this.dom.refundEnd) this.dom.refundEnd.value = todayStr;
         if(this.dom.refundStart) this.dom.refundStart.value = Flowork.fmtDate(lastMonth);
 
         this.loadSettings();
@@ -83,8 +89,20 @@ class SalesApp {
         if(this.dom.modeSales) this.dom.modeSales.addEventListener('change', () => this.setMode('sales'));
         if(this.dom.modeRefund) this.dom.modeRefund.addEventListener('change', () => this.setMode('refund'));
         
-        if(this.dom.searchInput) this.dom.searchInput.addEventListener('keydown', (e) => { if(e.key==='Enter') this.search(); });
-        if(this.dom.btnSearch) this.dom.btnSearch.addEventListener('click', () => this.search());
+        if(this.dom.searchInput) {
+            this.dom.searchInput.addEventListener('keydown', (e) => { 
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    this.search(); 
+                }
+            });
+        }
+        if(this.dom.btnSearch) {
+            this.dom.btnSearch.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.search();
+            });
+        }
         
         if(this.dom.btnToggleOnline) this.dom.btnToggleOnline.addEventListener('click', () => this.toggleOnline());
         if(this.dom.btnClearCart) this.dom.btnClearCart.addEventListener('click', () => { this.cart = []; this.renderCart(); });
@@ -96,7 +114,6 @@ class SalesApp {
         if(this.dom.btnHold) this.dom.btnHold.addEventListener('click', () => this.toggleHold());
         if(this.dom.btnDiscount) this.dom.btnDiscount.addEventListener('click', () => this.applyAutoDiscount());
 
-        // 모바일 탭 전환 로직
         if(this.dom.mobileTabs) {
             this.dom.mobileTabs.forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -112,9 +129,6 @@ class SalesApp {
             btn.classList.toggle('active', btn.dataset.target === targetId);
         });
         
-        // CSS 클래스 조작 (.active)
-        // 데스크탑 CSS에서는 .sales-left, .sales-right가 항상 보이고, 
-        // 모바일 미디어쿼리에서만 display:none 처리됨.
         if (targetId === 'sales-left') {
             this.dom.leftPanel.classList.add('active');
             this.dom.rightPanel.classList.remove('active');
@@ -124,9 +138,6 @@ class SalesApp {
         }
     }
 
-    // ... (이하 post, loadSettings, setMode 등 API/로직 함수들은 기존과 동일하여 생략) ...
-    // ... (하지만 실제 전체 코드 전달이므로 아래에 포함합니다) ...
-    
     async post(url, data) {
         if (this.targetStoreId) {
             data.target_store_id = this.targetStoreId;
@@ -244,7 +255,6 @@ class SalesApp {
                 const addHandler = () => {
                     this.addToCart({ ...item, ...v, quantity: 1 });
                     this.detailModal.hide();
-                    // 모바일에서만 장바구니 탭으로 자동 전환
                     if(window.innerWidth < 992) this.switchMobileTab('sales-right'); 
                 };
                 tr.querySelector('.btn-add').onclick = addHandler;
@@ -350,7 +360,6 @@ class SalesApp {
         this.cart.forEach((item, idx) => {
             const org = item.original_price || item.sale_price;
             const sale = item.sale_price;
-            // let discountRate = (org > 0 && org > sale) ? Math.round((1 - (sale / org)) * 100) : 0;
             
             const unit = sale - item.discount_amount;
             const sub = unit * item.quantity;
