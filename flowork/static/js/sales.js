@@ -1,389 +1,390 @@
-class SalesApp {
-    constructor() {
-        this.container = document.querySelector('.sales-container:not([data-initialized])');
-        if (!this.container) return;
-        this.container.dataset.initialized = "true";
+if (!window.SalesApp) {
+    window.SalesApp = class SalesApp {
+        constructor() {
+            this.container = document.querySelector('.sales-container:not([data-initialized])');
+            if (!this.container) return;
+            this.container.dataset.initialized = "true";
 
-        this.urls = JSON.parse(this.container.dataset.apiUrls || '{}');
-        this.targetStoreId = this.container.dataset.targetStoreId;
-        
-        this.mode = 'sales';
-        this.cart = [];
-        this.heldCart = null;
-        this.isOnline = false;
-        this.refundSaleId = null;
-        this.config = { amount_discounts: [] };
-        
-        this.dom = this.cacheDom();
-        this.init();
-    }
-
-    cacheDom() {
-        const c = this.container;
-        const parent = c.closest('.page-content-layer') || document;
-
-        return {
-            leftPanel: c.querySelector('#sales-left-panel'),
-            rightPanel: c.querySelector('#sales-right-panel'),
-            mobileTabs: parent.querySelectorAll('.mobile-tab-btn'),
-            dateSales: c.querySelector('#date-area-sales'),
-            dateRefund: c.querySelector('#date-area-refund'),
-            saleDate: c.querySelector('#sale-date'),
-            refundStart: c.querySelector('#refund-start'),
-            refundEnd: c.querySelector('#refund-end'),
-            modeSales: c.querySelector('#mode-sales'),
-            modeRefund: c.querySelector('#mode-refund'),
-            searchInput: c.querySelector('#search-input'),
-            btnSearch: c.querySelector('#btn-search'),
-            leftTbody: c.querySelector('#left-table-body'),
-            cartTbody: c.querySelector('#cart-tbody'),
-            totalQty: c.querySelector('#total-qty'),
-            totalAmt: c.querySelector('#total-amount'),
-            mobileCartBadge: parent.querySelector('#mobile-cart-badge'),
-            salesActions: c.querySelector('#sales-actions'),
-            refundActions: c.querySelector('#refund-actions'),
-            refundInfo: c.querySelector('#refund-target-info'),
-            btnSubmitSale: c.querySelector('#btn-submit-sale'),
-            btnSubmitRefund: c.querySelector('#btn-submit-refund'),
-            btnCancelRefund: c.querySelector('#btn-cancel-refund'),
-            btnToggleOnline: c.querySelector('#btn-toggle-online'),
-            btnClearCart: c.querySelector('#btn-clear-cart'),
-            btnHold: c.querySelector('#btn-hold-sale'),
-            btnDiscount: c.querySelector('#btn-apply-discount'),
-            detailModalEl: parent.querySelector('#detail-modal'),
-            recordsModalEl: parent.querySelector('#records-modal'),
-            storeSelect: c.querySelector('#admin-store-select') 
-        };
-    }
-
-    init() {
-        if (this.dom.detailModalEl) {
-            this.detailModal = new bootstrap.Modal(this.dom.detailModalEl);
-            this.dom.detailModalEl.addEventListener('hidden.bs.modal', () => {
-                 if(this.dom.searchInput) this.dom.searchInput.focus();
-            });
-        }
-        if (this.dom.recordsModalEl) {
-            this.recordsModal = new bootstrap.Modal(this.dom.recordsModalEl);
-            this.dom.recordsModalEl.addEventListener('hidden.bs.modal', () => {
-                 if(this.dom.searchInput) this.dom.searchInput.focus();
-            });
+            this.urls = JSON.parse(this.container.dataset.apiUrls || '{}');
+            this.targetStoreId = this.container.dataset.targetStoreId;
+            
+            this.mode = 'sales';
+            this.cart = [];
+            this.heldCart = null;
+            this.isOnline = false;
+            this.refundSaleId = null;
+            this.config = { amount_discounts: [] };
+            
+            this.dom = this.cacheDom();
+            this.init();
         }
 
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        const todayStr = `${yyyy}-${mm}-${dd}`;
+        cacheDom() {
+            const c = this.container;
+            const parent = c.closest('.page-content-layer') || document;
 
-        if(this.dom.saleDate) {
-            this.dom.saleDate.value = todayStr;
-        }
-
-        const lastMonth = new Date();
-        lastMonth.setMonth(today.getMonth() - 1);
-        if(this.dom.refundEnd) this.dom.refundEnd.value = todayStr;
-        if(this.dom.refundStart) this.dom.refundStart.value = window.Flowork.fmtDate(lastMonth);
-
-        this.loadSettings();
-
-        if(this.dom.modeSales) this.dom.modeSales.addEventListener('change', () => this.setMode('sales'));
-        if(this.dom.modeRefund) this.dom.modeRefund.addEventListener('change', () => this.setMode('refund'));
-        
-        if(this.dom.searchInput) {
-            this.dom.searchInput.addEventListener('keydown', (e) => { 
-                if(e.key === 'Enter') {
-                    e.preventDefault();
-                    this.search(); 
-                }
-            });
-        }
-        if(this.dom.btnSearch) {
-            this.dom.btnSearch.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.search();
-            });
-        }
-        
-        if(this.dom.btnToggleOnline) this.dom.btnToggleOnline.addEventListener('click', () => this.toggleOnline());
-        if(this.dom.btnClearCart) this.dom.btnClearCart.addEventListener('click', () => { this.cart = []; this.renderCart(); });
-        
-        if(this.dom.btnSubmitSale) this.dom.btnSubmitSale.addEventListener('click', () => this.submitSale());
-        if(this.dom.btnSubmitRefund) this.dom.btnSubmitRefund.addEventListener('click', () => this.submitRefund());
-        if(this.dom.btnCancelRefund) this.dom.btnCancelRefund.addEventListener('click', () => this.resetRefund());
-        
-        if(this.dom.btnHold) this.dom.btnHold.addEventListener('click', () => this.toggleHold());
-        if(this.dom.btnDiscount) this.dom.btnDiscount.addEventListener('click', () => this.applyAutoDiscount());
-
-        if(this.dom.mobileTabs) {
-            this.dom.mobileTabs.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const targetId = e.currentTarget.dataset.target;
-                    this.switchMobileTab(targetId);
-                });
-            });
-        }
-    }
-
-    switchMobileTab(targetId) {
-        this.dom.mobileTabs.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.target === targetId);
-        });
-        
-        if (targetId === 'sales-left') {
-            this.dom.leftPanel.classList.add('active');
-            this.dom.rightPanel.classList.remove('active');
-        } else {
-            this.dom.leftPanel.classList.remove('active');
-            this.dom.rightPanel.classList.add('active');
-        }
-    }
-
-    async post(url, data) {
-        if (this.targetStoreId) {
-            data.target_store_id = this.targetStoreId;
-        }
-        return await window.Flowork.post(url, data);
-    }
-    
-    async loadSettings() {
-        try {
-            let url = this.urls.salesSettings;
-            if (this.targetStoreId) {
-                url += (url.includes('?') ? '&' : '?') + 'target_store_id=' + this.targetStoreId;
-            }
-            const data = await window.Flowork.get(url);
-            if (data.status === 'success') this.config = data.config;
-        } catch (e) { console.error("Settings Load Failed", e); }
-    }
-
-    setMode(mode) {
-        this.mode = mode;
-        this.cart = [];
-        this.renderCart();
-        this.dom.leftTbody.innerHTML = '';
-        this.dom.searchInput.value = '';
-
-        const isSales = (mode === 'sales');
-        if(this.dom.dateSales) this.dom.dateSales.style.display = isSales ? 'block' : 'none';
-        if(this.dom.dateRefund) this.dom.dateRefund.style.display = isSales ? 'none' : 'block';
-        
-        this.dom.salesActions.style.display = isSales ? 'block' : 'none';
-        this.dom.refundActions.style.display = isSales ? 'none' : 'block';
-        
-        if (!isSales) this.dom.btnToggleOnline.style.display = 'none';
-        else this.dom.btnToggleOnline.style.display = 'block';
-    }
-
-    toggleOnline() {
-        this.isOnline = !this.isOnline;
-        const btn = this.dom.btnToggleOnline;
-        btn.textContent = this.isOnline ? 'ONLINE' : 'OFFLINE';
-        btn.classList.toggle('btn-outline-dark');
-        btn.classList.toggle('btn-info');
-    }
-
-    async search() {
-        const query = this.dom.searchInput.value.trim();
-        if (!query) return;
-
-        if (!this.targetStoreId && this.dom.storeSelect && !this.dom.storeSelect.value) {
-            window.Flowork.toast('매장을 먼저 선택해주세요.', 'warning');
-            this.dom.storeSelect.focus();
-            return;
-        }
-
-        this.dom.leftTbody.innerHTML = '<tr><td colspan="4" class="text-center py-3">검색 중...</td></tr>';
-
-        try {
-            const payload = {
-                query, 
-                mode: this.mode,
-                start_date: this.dom.refundStart.value,
-                end_date: this.dom.refundEnd.value
+            return {
+                leftPanel: c.querySelector('#sales-left-panel'),
+                rightPanel: c.querySelector('#sales-right-panel'),
+                mobileTabs: parent.querySelectorAll('.mobile-tab-btn'),
+                dateSales: c.querySelector('#date-area-sales'),
+                dateRefund: c.querySelector('#date-area-refund'),
+                saleDate: c.querySelector('#sale-date'),
+                refundStart: c.querySelector('#refund-start'),
+                refundEnd: c.querySelector('#refund-end'),
+                modeSales: c.querySelector('#mode-sales'),
+                modeRefund: c.querySelector('#mode-refund'),
+                searchInput: c.querySelector('#search-input'),
+                btnSearch: c.querySelector('#btn-search'),
+                leftTbody: c.querySelector('#left-table-body'),
+                cartTbody: c.querySelector('#cart-tbody'),
+                totalQty: c.querySelector('#total-qty'),
+                totalAmt: c.querySelector('#total-amount'),
+                mobileCartBadge: parent.querySelector('#mobile-cart-badge'),
+                salesActions: c.querySelector('#sales-actions'),
+                refundActions: c.querySelector('#refund-actions'),
+                refundInfo: c.querySelector('#refund-target-info'),
+                btnSubmitSale: c.querySelector('#btn-submit-sale'),
+                btnSubmitRefund: c.querySelector('#btn-submit-refund'),
+                btnCancelRefund: c.querySelector('#btn-cancel-refund'),
+                btnToggleOnline: c.querySelector('#btn-toggle-online'),
+                btnClearCart: c.querySelector('#btn-clear-cart'),
+                btnHold: c.querySelector('#btn-hold-sale'),
+                btnDiscount: c.querySelector('#btn-apply-discount'),
+                detailModalEl: parent.querySelector('#detail-modal'),
+                recordsModalEl: parent.querySelector('#records-modal'),
+                storeSelect: c.querySelector('#admin-store-select') 
             };
-            
-            const data = await this.post(this.urls.searchSalesProducts, payload);
-            this.dom.leftTbody.innerHTML = '';
+        }
 
-            if (!data.results || data.results.length === 0) {
-                this.dom.leftTbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">검색 결과가 없습니다.</td></tr>';
-                return;
+        init() {
+            if (this.dom.detailModalEl) {
+                this.detailModal = new bootstrap.Modal(this.dom.detailModalEl);
+                this.dom.detailModalEl.addEventListener('hidden.bs.modal', () => {
+                     if(this.dom.searchInput) this.dom.searchInput.focus();
+                });
+            }
+            if (this.dom.recordsModalEl) {
+                this.recordsModal = new bootstrap.Modal(this.dom.recordsModalEl);
+                this.dom.recordsModalEl.addEventListener('hidden.bs.modal', () => {
+                     if(this.dom.searchInput) this.dom.searchInput.focus();
+                });
             }
 
-            data.results.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="fw-bold">${item.product_number}</td>
-                    <td><div class="text-truncate" style="max-width: 120px;">${item.product_name}</div></td>
-                    <td><span class="badge bg-light text-dark border">${item.color}</span></td>
-                    <td class="text-center fw-bold text-primary">${item.stat_qty}</td>
-                `;
-                tr.onclick = () => this.handleResultClick(item);
-                this.dom.leftTbody.appendChild(tr);
-            });
-        } catch (e) {
-            this.dom.leftTbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">오류 발생</td></tr>';
-        }
-    }
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${yyyy}-${mm}-${dd}`;
 
-    async handleResultClick(item) {
-        if (this.mode === 'sales') {
-            this.showDetailModal(item);
-        } else {
-            this.showRefundRecords(item);
-        }
-    }
-
-    async showDetailModal(item) {
-        const title = this.dom.detailModalEl.querySelector('.modal-title');
-        const tbody = this.dom.detailModalEl.querySelector('tbody');
-        
-        title.textContent = `${item.product_name} (${item.product_number})`;
-        tbody.innerHTML = '<tr><td colspan="5" class="py-3">로딩중...</td></tr>';
-        this.detailModal.show();
-
-        try {
-            const data = await this.post(this.urls.searchSalesProducts, { 
-                query: item.product_number, 
-                mode: 'detail_stock' 
-            });
-            
-            tbody.innerHTML = '';
-            data.variants.forEach(v => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${v.color}</td>
-                    <td><b>${v.size}</b></td>
-                    <td class="${v.stock <= 0 ? 'text-danger' : 'text-primary'} fw-bold">${v.stock}</td>
-                    <td>${window.Flowork.fmtNum(v.sale_price)}</td>
-                    <td><button class="btn btn-sm btn-primary btn-add py-0">추가</button></td>
-                `;
-                const addHandler = () => {
-                    this.addToCart({ ...item, ...v, quantity: 1 });
-                    this.detailModal.hide();
-                    if(window.innerWidth < 992) this.switchMobileTab('sales-right'); 
-                };
-                tr.querySelector('.btn-add').onclick = addHandler;
-                tr.ondblclick = addHandler;
-                tbody.appendChild(tr);
-            });
-        } catch (e) { tbody.innerHTML = '<tr><td colspan="5" class="text-danger">오류 발생</td></tr>'; }
-    }
-
-    async showRefundRecords(item) {
-        const title = this.dom.recordsModalEl.querySelector('.modal-title');
-        const tbody = this.dom.recordsModalEl.querySelector('tbody');
-        title.textContent = `${item.product_name} (${item.color})`;
-        tbody.innerHTML = '<tr><td colspan="5" class="py-3">조회중...</td></tr>';
-        this.recordsModal.show();
-
-        try {
-            const data = await this.post(this.urls.getRefundRecords, {
-                product_number: item.product_number,
-                color: item.color,
-                start_date: this.dom.refundStart.value,
-                end_date: this.dom.refundEnd.value
-            });
-
-            tbody.innerHTML = '';
-            if (data.records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="py-3">기록 없음</td></tr>';
-                return;
+            if(this.dom.saleDate) {
+                this.dom.saleDate.value = todayStr;
             }
 
-            data.records.forEach(rec => {
-                const tr = document.createElement('tr');
-                tr.style.cursor = 'pointer';
-                tr.innerHTML = `
-                    <td>${rec.sale_date.substring(5)}</td>
-                    <td>${rec.receipt_number.split(' ')[1]}</td>
-                    <td>${rec.product_number}</td>
-                    <td>${rec.size}</td>
-                    <td class="text-end">${window.Flowork.fmtNum(rec.total_amount)}</td>
-                `;
-                tr.onclick = async () => {
-                    await this.loadRefundCart(rec.sale_id, rec.receipt_number);
-                    this.recordsModal.hide();
-                    if(window.innerWidth < 992) this.switchMobileTab('sales-right');
-                };
-                tbody.appendChild(tr);
-            });
-        } catch (e) { tbody.innerHTML = '<tr><td colspan="5">오류 발생</td></tr>'; }
-    }
+            const lastMonth = new Date();
+            lastMonth.setMonth(today.getMonth() - 1);
+            if(this.dom.refundEnd) this.dom.refundEnd.value = todayStr;
+            if(this.dom.refundStart) this.dom.refundStart.value = window.Flowork.fmtDate(lastMonth);
 
-    async loadRefundCart(saleId, receiptNumber) {
-        try {
-            let url = this.urls.saleDetails.replace('999999', saleId);
+            this.loadSettings();
+
+            if(this.dom.modeSales) this.dom.modeSales.addEventListener('change', () => this.setMode('sales'));
+            if(this.dom.modeRefund) this.dom.modeRefund.addEventListener('change', () => this.setMode('refund'));
+            
+            if(this.dom.searchInput) {
+                this.dom.searchInput.addEventListener('keydown', (e) => { 
+                    if(e.key === 'Enter') {
+                        e.preventDefault();
+                        this.search(); 
+                    }
+                });
+            }
+            if(this.dom.btnSearch) {
+                this.dom.btnSearch.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.search();
+                });
+            }
+            
+            if(this.dom.btnToggleOnline) this.dom.btnToggleOnline.addEventListener('click', () => this.toggleOnline());
+            if(this.dom.btnClearCart) this.dom.btnClearCart.addEventListener('click', () => { this.cart = []; this.renderCart(); });
+            
+            if(this.dom.btnSubmitSale) this.dom.btnSubmitSale.addEventListener('click', () => this.submitSale());
+            if(this.dom.btnSubmitRefund) this.dom.btnSubmitRefund.addEventListener('click', () => this.submitRefund());
+            if(this.dom.btnCancelRefund) this.dom.btnCancelRefund.addEventListener('click', () => this.resetRefund());
+            
+            if(this.dom.btnHold) this.dom.btnHold.addEventListener('click', () => this.toggleHold());
+            if(this.dom.btnDiscount) this.dom.btnDiscount.addEventListener('click', () => this.applyAutoDiscount());
+
+            if(this.dom.mobileTabs) {
+                this.dom.mobileTabs.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const targetId = e.currentTarget.dataset.target;
+                        this.switchMobileTab(targetId);
+                    });
+                });
+            }
+        }
+
+        switchMobileTab(targetId) {
+            this.dom.mobileTabs.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.target === targetId);
+            });
+            
+            if (targetId === 'sales-left') {
+                this.dom.leftPanel.classList.add('active');
+                this.dom.rightPanel.classList.remove('active');
+            } else {
+                this.dom.leftPanel.classList.remove('active');
+                this.dom.rightPanel.classList.add('active');
+            }
+        }
+
+        async post(url, data) {
             if (this.targetStoreId) {
-                url += (url.includes('?') ? '&' : '?') + 'target_store_id=' + this.targetStoreId;
+                data.target_store_id = this.targetStoreId;
             }
-            const data = await window.Flowork.get(url);
-            
-            if (data.status === 'success') {
-                this.refundSaleId = saleId;
-                this.dom.refundInfo.textContent = receiptNumber;
-                this.cart = data.items.map(i => ({
-                    variant_id: i.variant_id,
-                    product_name: i.name,
-                    product_number: i.pn,
-                    color: i.color,
-                    size: i.size,
-                    original_price: i.original_price || i.price,
-                    sale_price: i.price,
-                    discount_amount: i.discount_amount,
-                    quantity: i.quantity
-                }));
-                this.renderCart();
-            }
-        } catch (e) { window.Flowork.toast('불러오기 실패', 'danger'); }
-    }
-
-    addToCart(item) {
-        const existing = this.cart.find(c => c.variant_id === item.variant_id);
-        if (existing) existing.quantity++;
-        else {
-            this.cart.push({
-                variant_id: item.variant_id,
-                product_name: item.product_name,
-                product_number: item.product_number,
-                color: item.color,
-                size: item.size,
-                original_price: item.original_price,
-                sale_price: item.sale_price,
-                discount_amount: 0,
-                quantity: 1
-            });
+            return await window.Flowork.post(url, data);
         }
-        this.renderCart();
-    }
+        
+        async loadSettings() {
+            try {
+                let url = this.urls.salesSettings;
+                if (this.targetStoreId) {
+                    url += (url.includes('?') ? '&' : '?') + 'target_store_id=' + this.targetStoreId;
+                }
+                const data = await window.Flowork.get(url);
+                if (data.status === 'success') this.config = data.config;
+            } catch (e) { console.error("Settings Load Failed", e); }
+        }
 
-    renderCart() {
-        const tbody = this.dom.cartTbody;
-        tbody.innerHTML = '';
-        let totalQty = 0;
-        let totalAmt = 0;
+        setMode(mode) {
+            this.mode = mode;
+            this.cart = [];
+            this.renderCart();
+            this.dom.leftTbody.innerHTML = '';
+            this.dom.searchInput.value = '';
 
-        this.cart.forEach((item, idx) => {
-            const org = item.original_price || item.sale_price;
-            const sale = item.sale_price;
+            const isSales = (mode === 'sales');
+            if(this.dom.dateSales) this.dom.dateSales.style.display = isSales ? 'block' : 'none';
+            if(this.dom.dateRefund) this.dom.dateRefund.style.display = isSales ? 'none' : 'block';
             
-            const unit = sale - item.discount_amount;
-            const sub = unit * item.quantity;
+            this.dom.salesActions.style.display = isSales ? 'block' : 'none';
+            this.dom.refundActions.style.display = isSales ? 'none' : 'block';
             
-            totalQty += item.quantity;
-            totalAmt += sub;
+            if (!isSales) this.dom.btnToggleOnline.style.display = 'none';
+            else this.dom.btnToggleOnline.style.display = 'block';
+        }
 
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${idx + 1}</td>
-                <td class="text-start">
-                    <div class="fw-bold text-truncate" style="max-width:120px;">${item.product_name}</div>
-                    <div class="small text-muted">${item.product_number}</div>
-                </td>
-                <td>${item.color}/${item.size}</td>
-                <td class="text-end small">${window.Flowork.fmtNum(sale)}</td>
-                <td><input type="tel" class="cart-input disc-in" value="${item.discount_amount}" data-idx="${idx}"></td>
+        toggleOnline() {
+            this.isOnline = !this.isOnline;
+            const btn = this.dom.btnToggleOnline;
+            btn.textContent = this.isOnline ? 'ONLINE' : 'OFFLINE';
+            btn.classList.toggle('btn-outline-dark');
+            btn.classList.toggle('btn-info');
+        }
+
+        async search() {
+            const query = this.dom.searchInput.value.trim();
+            if (!query) return;
+
+            if (!this.targetStoreId && this.dom.storeSelect && !this.dom.storeSelect.value) {
+                window.Flowork.toast('매장을 먼저 선택해주세요.', 'warning');
+                this.dom.storeSelect.focus();
+                return;
+            }
+
+            this.dom.leftTbody.innerHTML = '<tr><td colspan="4" class="text-center py-3">검색 중...</td></tr>';
+
+            try {
+                const payload = {
+                    query, 
+                    mode: this.mode,
+                    start_date: this.dom.refundStart.value,
+                    end_date: this.dom.refundEnd.value
+                };
+                
+                const data = await this.post(this.urls.searchSalesProducts, payload);
+                this.dom.leftTbody.innerHTML = '';
+
+                if (!data.results || data.results.length === 0) {
+                    this.dom.leftTbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">검색 결과가 없습니다.</td></tr>';
+                    return;
+                }
+
+                data.results.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="fw-bold">${item.product_number}</td>
+                        <td><div class="text-truncate" style="max-width: 120px;">${item.product_name}</div></td>
+                        <td><span class="badge bg-light text-dark border">${item.color}</span></td>
+                        <td class="text-center fw-bold text-primary">${item.stat_qty}</td>
+                    `;
+                    tr.onclick = () => this.handleResultClick(item);
+                    this.dom.leftTbody.appendChild(tr);
+                });
+            } catch (e) {
+                this.dom.leftTbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">오류 발생</td></tr>';
+            }
+        }
+
+        async handleResultClick(item) {
+            if (this.mode === 'sales') {
+                this.showDetailModal(item);
+            } else {
+                this.showRefundRecords(item);
+            }
+        }
+
+        async showDetailModal(item) {
+            const title = this.dom.detailModalEl.querySelector('.modal-title');
+            const tbody = this.dom.detailModalEl.querySelector('tbody');
+            
+            title.textContent = `${item.product_name} (${item.product_number})`;
+            tbody.innerHTML = '<tr><td colspan="5" class="py-3">로딩중...</td></tr>';
+            this.detailModal.show();
+
+            try {
+                const data = await this.post(this.urls.searchSalesProducts, { 
+                    query: item.product_number, 
+                    mode: 'detail_stock' 
+                });
+                
+                tbody.innerHTML = '';
+                data.variants.forEach(v => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${v.color}</td>
+                        <td><b>${v.size}</b></td>
+                        <td class="${v.stock <= 0 ? 'text-danger' : 'text-primary'} fw-bold">${v.stock}</td>
+                        <td>${window.Flowork.fmtNum(v.sale_price)}</td>
+                        <td><button class="btn btn-sm btn-primary btn-add py-0">추가</button></td>
+                    `;
+                    const addHandler = () => {
+                        this.addToCart({ ...item, ...v, quantity: 1 });
+                        this.detailModal.hide();
+                        if(window.innerWidth < 992) this.switchMobileTab('sales-right'); 
+                    };
+                    tr.querySelector('.btn-add').onclick = addHandler;
+                    tr.ondblclick = addHandler;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) { tbody.innerHTML = '<tr><td colspan="5" class="text-danger">오류 발생</td></tr>'; }
+        }
+
+        async showRefundRecords(item) {
+            const title = this.dom.recordsModalEl.querySelector('.modal-title');
+            const tbody = this.dom.recordsModalEl.querySelector('tbody');
+            title.textContent = `${item.product_name} (${item.color})`;
+            tbody.innerHTML = '<tr><td colspan="5" class="py-3">조회중...</td></tr>';
+            this.recordsModal.show();
+
+            try {
+                const data = await this.post(this.urls.getRefundRecords, {
+                    product_number: item.product_number,
+                    color: item.color,
+                    start_date: this.dom.refundStart.value,
+                    end_date: this.dom.refundEnd.value
+                });
+
+                tbody.innerHTML = '';
+                if (data.records.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-3">기록 없음</td></tr>';
+                    return;
+                }
+
+                data.records.forEach(rec => {
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.innerHTML = `
+                        <td>${rec.sale_date.substring(5)}</td>
+                        <td>${rec.receipt_number.split(' ')[1]}</td>
+                        <td>${rec.product_number}</td>
+                        <td>${rec.size}</td>
+                        <td class="text-end">${window.Flowork.fmtNum(rec.total_amount)}</td>
+                    `;
+                    tr.onclick = async () => {
+                        await this.loadRefundCart(rec.sale_id, rec.receipt_number);
+                        this.recordsModal.hide();
+                        if(window.innerWidth < 992) this.switchMobileTab('sales-right');
+                    };
+                    tbody.appendChild(tr);
+                });
+            } catch (e) { tbody.innerHTML = '<tr><td colspan="5">오류 발생</td></tr>'; }
+        }
+
+        async loadRefundCart(saleId, receiptNumber) {
+            try {
+                let url = this.urls.saleDetails.replace('999999', saleId);
+                if (this.targetStoreId) {
+                    url += (url.includes('?') ? '&' : '?') + 'target_store_id=' + this.targetStoreId;
+                }
+                const data = await window.Flowork.get(url);
+                
+                if (data.status === 'success') {
+                    this.refundSaleId = saleId;
+                    this.dom.refundInfo.textContent = receiptNumber;
+                    this.cart = data.items.map(i => ({
+                        variant_id: i.variant_id,
+                        product_name: i.name,
+                        product_number: i.pn,
+                        color: i.color,
+                        size: i.size,
+                        original_price: i.original_price || i.price,
+                        sale_price: i.price,
+                        discount_amount: i.discount_amount,
+                        quantity: i.quantity
+                    }));
+                    this.renderCart();
+                }
+            } catch (e) { window.Flowork.toast('불러오기 실패', 'danger'); }
+        }
+
+        addToCart(item) {
+            const existing = this.cart.find(c => c.variant_id === item.variant_id);
+            if (existing) existing.quantity++;
+            else {
+                this.cart.push({
+                    variant_id: item.variant_id,
+                    product_name: item.product_name,
+                    product_number: item.product_number,
+                    color: item.color,
+                    size: item.size,
+                    original_price: item.original_price,
+                    sale_price: item.sale_price,
+                    discount_amount: 0,
+                    quantity: 1
+                });
+            }
+            this.renderCart();
+        }
+
+        renderCart() {
+            const tbody = this.dom.cartTbody;
+            tbody.innerHTML = '';
+            let totalQty = 0;
+            let totalAmt = 0;
+
+            this.cart.forEach((item, idx) => {
+                const org = item.original_price || item.sale_price;
+                const sale = item.sale_price;
+                
+                const unit = sale - item.discount_amount;
+                const sub = unit * item.quantity;
+                
+                totalQty += item.quantity;
+                totalAmt += sub;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td class="text-start">
+                        <div class="fw-bold text-truncate" style="max-width:120px;">${item.product_name}</div>
+                        <div class="small text-muted">${item.product_number}</div>
+                    </td>
+                    <td>${item.color}/${item.size}</td>
+                    <td class="text-end small">${window.Flowork.fmtNum(sale)}</td>
+                    <td><input type="tel" class="cart-input disc-in" value="${item.discount_amount}" data-idx="${idx}"></td>
                 <td><input type="tel" class="cart-input qty-in" value="${item.quantity}" data-idx="${idx}"></td>
                 <td><i class="bi bi-x-circle text-danger btn-del" style="cursor:pointer;" data-idx="${idx}"></i></td>
             `;
@@ -502,8 +503,9 @@ class SalesApp {
         this.cart = [];
         this.renderCart();
     }
+    };
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.querySelector('.sales-container')) new SalesApp();
-});
+if (document.querySelector('.sales-container')) {
+    new window.SalesApp();
+}
