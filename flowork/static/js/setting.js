@@ -110,23 +110,23 @@ class SettingApp {
     async setBrandName(e) {
         e.preventDefault();
         const name = this.dom.brandNameInput.value.trim();
-        if(!name) return Flowork.toast('이름을 입력하세요', 'warning');
+        if(!name) return window.Flowork.toast('이름을 입력하세요', 'warning');
         
         try {
-            const res = await Flowork.post(this.urls.setBrand, { brand_name: name });
-            Flowork.toast(res.message, 'success');
-        } catch(e) { Flowork.toast('저장 실패', 'danger'); }
+            const res = await window.Flowork.post(this.urls.setBrand, { brand_name: name });
+            window.Flowork.toast(res.message, 'success');
+        } catch(e) { window.Flowork.toast('저장 실패', 'danger'); }
     }
 
     async loadSettings() {
         if(!confirm('설정 파일을 로드하시겠습니까?')) return;
         this.dom.btnLoadSettings.disabled = true;
         try {
-            const res = await Flowork.post(this.urls.loadSettings, {});
-            Flowork.toast(res.message, 'success');
+            const res = await window.Flowork.post(this.urls.loadSettings, {});
+            window.Flowork.toast(res.message, 'success');
             setTimeout(() => window.location.reload(), 1500);
         } catch(e) {
-            Flowork.toast(e.message, 'danger');
+            window.Flowork.toast(e.message, 'danger');
         } finally {
             this.dom.btnLoadSettings.disabled = false;
         }
@@ -134,25 +134,32 @@ class SettingApp {
 
     async addStore(e) {
         e.preventDefault();
+        
+        if (!this.urls.addStore) {
+            console.error("API URL 'addStore' is undefined");
+            window.Flowork.toast('API 설정 오류: 매장 추가 URL이 없습니다.', 'danger');
+            return;
+        }
+
         const payload = {
             store_code: this.dom.newStoreInputs.code.value,
             store_name: this.dom.newStoreInputs.name.value,
             store_phone: this.dom.newStoreInputs.phone.value
         };
         try {
-            const res = await Flowork.post(this.urls.addStore, payload);
-            Flowork.toast(res.message, 'success');
+            const res = await window.Flowork.post(this.urls.addStore, payload);
+            window.Flowork.toast(res.message, 'success');
             setTimeout(() => window.location.reload(), 1000);
-        } catch(e) { Flowork.toast(e.message, 'danger'); }
+        } catch(e) { window.Flowork.toast(e.message, 'danger'); }
     }
 
     async deleteStore(btn) {
         if(!confirm('삭제하시겠습니까?')) return;
         try {
-            await Flowork.api(`${this.urls.delStore}${btn.dataset.id}`, { method: 'DELETE' });
-            Flowork.toast('삭제되었습니다', 'success');
+            await window.Flowork.api(`${this.urls.delStore}${btn.dataset.id}`, { method: 'DELETE' });
+            window.Flowork.toast('삭제되었습니다', 'success');
             btn.closest('tr').remove();
-        } catch(e) { Flowork.toast(e.message, 'danger'); }
+        } catch(e) { window.Flowork.toast(e.message, 'danger'); }
     }
 
     openStoreModal(btn) {
@@ -171,37 +178,37 @@ class SettingApp {
             store_phone: this.dom.editStoreInputs.phone.value
         };
         try {
-            await Flowork.post(`${this.urls.updateStore}${id}`, payload);
-            Flowork.toast('수정되었습니다', 'success');
+            await window.Flowork.post(`${this.urls.updateStore}${id}`, payload);
+            window.Flowork.toast('수정되었습니다', 'success');
             this.dom.modalStore.hide();
             setTimeout(() => window.location.reload(), 1000);
-        } catch(e) { Flowork.toast(e.message, 'danger'); }
+        } catch(e) { window.Flowork.toast(e.message, 'danger'); }
     }
 
     async approveStore(btn) {
         if(!confirm('승인하시겠습니까?')) return;
         try { 
-            await Flowork.post(`${this.urls.approveStore}${btn.dataset.id}`, {}); 
-            Flowork.toast('승인되었습니다', 'success');
+            await window.Flowork.post(`${this.urls.approveStore}${btn.dataset.id}`, {}); 
+            window.Flowork.toast('승인되었습니다', 'success');
             setTimeout(() => window.location.reload(), 1000); 
-        } catch(e) { Flowork.toast(e.message, 'danger'); }
+        } catch(e) { window.Flowork.toast(e.message, 'danger'); }
     }
 
     async resetStore(btn) {
         if(!confirm('가입 정보를 초기화하시겠습니까?')) return;
         try { 
-            await Flowork.post(`${this.urls.resetStore}${btn.dataset.id}`, {}); 
-            Flowork.toast('초기화되었습니다', 'success');
+            await window.Flowork.post(`${this.urls.resetStore}${btn.dataset.id}`, {}); 
+            window.Flowork.toast('초기화되었습니다', 'success');
             setTimeout(() => window.location.reload(), 1000); 
-        } catch(e) { Flowork.toast(e.message, 'danger'); }
+        } catch(e) { window.Flowork.toast(e.message, 'danger'); }
     }
 
     async toggleStoreActive(btn) {
         try { 
-            const res = await Flowork.post(`${this.urls.toggleActive}${btn.dataset.id}`, {}); 
-            Flowork.toast(res.message, 'success');
+            const res = await window.Flowork.post(`${this.urls.toggleActive}${btn.dataset.id}`, {}); 
+            window.Flowork.toast(res.message, 'success');
             setTimeout(() => window.location.reload(), 1000); 
-        } catch(e) { Flowork.toast(e.message, 'danger'); }
+        } catch(e) { window.Flowork.toast(e.message, 'danger'); }
     }
 
     async addStaff(e) {
@@ -212,19 +219,19 @@ class SettingApp {
             contact: this.dom.newStaffInputs.contact.value
         };
         try {
-            await Flowork.post(this.urls.addStaff, payload);
-            Flowork.toast('직원이 추가되었습니다', 'success');
+            await window.Flowork.post(this.urls.addStaff, payload);
+            window.Flowork.toast('직원이 추가되었습니다', 'success');
             setTimeout(() => window.location.reload(), 1000);
-        } catch(e) { Flowork.toast(e.message, 'danger'); }
+        } catch(e) { window.Flowork.toast(e.message, 'danger'); }
     }
 
     async deleteStaff(btn) {
         if(!confirm('삭제하시겠습니까?')) return;
         try {
-            await Flowork.api(`${this.urls.delStaff}${btn.dataset.id}`, { method: 'DELETE' });
-            Flowork.toast('삭제되었습니다', 'success');
+            await window.Flowork.api(`${this.urls.delStaff}${btn.dataset.id}`, { method: 'DELETE' });
+            window.Flowork.toast('삭제되었습니다', 'success');
             btn.closest('tr').remove();
-        } catch(e) { Flowork.toast(e.message, 'danger'); }
+        } catch(e) { window.Flowork.toast(e.message, 'danger'); }
     }
 
     openStaffModal(btn) {
@@ -243,11 +250,11 @@ class SettingApp {
             contact: this.dom.editStaffInputs.contact.value
         };
         try {
-            await Flowork.post(`${this.urls.updateStaff}${id}`, payload);
-            Flowork.toast('수정되었습니다', 'success');
+            await window.Flowork.post(`${this.urls.updateStaff}${id}`, payload);
+            window.Flowork.toast('수정되었습니다', 'success');
             this.dom.modalStaff.hide();
             setTimeout(() => window.location.reload(), 1000);
-        } catch(e) { Flowork.toast(e.message, 'danger'); }
+        } catch(e) { window.Flowork.toast(e.message, 'danger'); }
     }
 
     initCategoryForm() {
@@ -296,10 +303,10 @@ class SettingApp {
             };
             
             try {
-                await Flowork.post(this.urls.updateSetting, { key: 'CATEGORY_CONFIG', value: config });
-                Flowork.toast('설정이 저장되었습니다', 'success');
+                await window.Flowork.post(this.urls.updateSetting, { key: 'CATEGORY_CONFIG', value: config });
+                window.Flowork.toast('설정이 저장되었습니다', 'success');
             } catch(e) {
-                Flowork.toast(e.message, 'danger');
+                window.Flowork.toast(e.message, 'danger');
             }
         };
     }

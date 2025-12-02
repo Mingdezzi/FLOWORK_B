@@ -17,7 +17,6 @@ if (!window.Flowork) {
                 'X-Requested-With': 'XMLHttpRequest'
             };
 
-            // [수정] GET/HEAD 요청이 아닐 때만 JSON 헤더 추가 (중요!)
             const method = (options.method || 'GET').toUpperCase();
             if (method !== 'GET' && method !== 'HEAD') {
                 headers['Content-Type'] = 'application/json';

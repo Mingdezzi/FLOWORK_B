@@ -36,10 +36,7 @@ class SaleItem(db.Model):
     size = db.Column(db.String(20))
     
     quantity = db.Column(db.Integer, nullable=False)
-    
-    # [수정] 누락되었던 original_price 컬럼 추가 (필수)
     original_price = db.Column(db.Integer, nullable=False, default=0)
-    
     unit_price = db.Column(db.Integer, nullable=False)
     discount_amount = db.Column(db.Integer, default=0)
     discounted_price = db.Column(db.Integer, default=0)
