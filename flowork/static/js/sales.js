@@ -207,6 +207,26 @@ if (!window.SalesApp) {
                 const data = await this.post(this.urls.searchSalesProducts, payload);
                 this.dom.leftTbody.innerHTML = '';
 
+                if (data.status === 'success' && data.match_type === 'variant') {
+                    const item = data.result;
+                    this.addToCart({
+                        variant_id: item.variant_id,
+                        product_name: item.product_name,
+                        product_number: item.product_number,
+                        color: item.color,
+                        size: item.size,
+                        original_price: item.original_price,
+                        sale_price: item.sale_price,
+                        discount_amount: 0,
+                        quantity: 1,
+                        stock: item.stock
+                    });
+                    this.dom.searchInput.value = '';
+                    this.dom.searchInput.focus();
+                    window.Flowork.toast(`${item.product_name} 추가됨`, 'success');
+                    return;
+                }
+
                 if (!data.results || data.results.length === 0) {
                     this.dom.leftTbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">검색 결과가 없습니다.</td></tr>';
                     return;
@@ -224,6 +244,7 @@ if (!window.SalesApp) {
                     this.dom.leftTbody.appendChild(tr);
                 });
             } catch (e) {
+                console.error(e);
                 this.dom.leftTbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">오류 발생</td></tr>';
             }
         }

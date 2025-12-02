@@ -18,7 +18,6 @@ class CheckApp {
             resetForm: this.container.querySelector('#form-reset-stock')
         };
 
-        // 컨테이너 dataset에서 URL 읽기
         this.urls = {
             fetch: this.container.dataset.apiFetchVariantUrl,
             update: this.container.dataset.bulkUpdateActualStockUrl
@@ -32,7 +31,7 @@ class CheckApp {
 
         this.init();
     }
-    // ... (나머지 로직은 이전과 동일하되, Flowork.toast 사용) ...
+    
     init() {
         if (this.dom.targetStoreSelect) {
             this.dom.targetStoreSelect.addEventListener('change', () => {
@@ -54,11 +53,15 @@ class CheckApp {
 
         if (this.dom.barcodeInput) {
             this.dom.barcodeInput.addEventListener('keydown', async (e) => {
+                if (e.isComposing) return;
+
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     const barcode = this.dom.barcodeInput.value.trim();
-                    if (barcode) await this.processBarcode(barcode);
-                    this.dom.barcodeInput.value = ''; 
+                    if (barcode) {
+                        this.dom.barcodeInput.value = ''; 
+                        await this.processBarcode(barcode);
+                    }
                 }
             });
         }
@@ -149,11 +152,14 @@ class CheckApp {
             } else {
                 this.setStatus(`오류: ${data.message}`, 'text-danger');
                 if(window.playBeep) window.playBeep('error');
+                this.dom.barcodeInput.value = '';
             }
         } catch (error) {
             console.error('Error:', error);
             this.setStatus('서버 통신 오류', 'text-danger');
             if(window.playBeep) window.playBeep('error');
+        } finally {
+            this.dom.barcodeInput.focus();
         }
     }
 

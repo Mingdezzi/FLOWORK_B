@@ -92,9 +92,40 @@ def search_sales_products():
         return jsonify({'status': 'success', 'results': []})
 
     q_clean = clean_string_upper(query)
+
+    matched_variant = db.session.query(Variant).filter(
+        Variant.barcode_cleaned == q_clean,
+        Product.brand_id == current_user.current_brand_id
+    ).join(Product).first()
+
+    if matched_variant:
+        product = matched_variant.product
+        
+        stock_qty = 0
+        if store_id:
+            stock = StoreStock.query.filter_by(store_id=store_id, variant_id=matched_variant.id).first()
+            stock_qty = stock.quantity if stock else 0
+
+        return jsonify({
+            'status': 'success',
+            'match_type': 'variant',
+            'result': {
+                'variant_id': matched_variant.id,
+                'product_id': product.id,
+                'product_name': product.product_name,
+                'product_number': product.product_number,
+                'color': matched_variant.color,
+                'size': matched_variant.size,
+                'original_price': matched_variant.original_price,
+                'sale_price': matched_variant.sale_price,
+                'stock': stock_qty
+            }
+        })
+
     search_filter = or_(
         Product.product_number_cleaned.contains(q_clean),
         Product.product_name_cleaned.contains(q_clean),
+        Product.product_name_choseong.contains(q_clean),
         Product.product_number.ilike(f"%{query}%"),
         Product.product_name.ilike(f"%{query}%")
     )
@@ -188,7 +219,7 @@ def search_sales_products():
             row['stat_qty'] = stat_qty
             results.append(row)
             
-    return jsonify({'status': 'success', 'results': results})
+    return jsonify({'status': 'success', 'match_type': 'list', 'results': results})
 
 @api_bp.route('/api/sales/refund_records', methods=['POST'])
 @login_required
