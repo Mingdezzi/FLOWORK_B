@@ -124,17 +124,18 @@
                 loader: document.querySelector('.spa-loader .bar'),
                 isInitRun: false,
                 abortController: null,
+                isPopStateProcessing: false,
 
                 init() {
                     if (this.isInitRun) return;
                     this.isInitRun = true;
 
-                    const initialUrl = window.location.pathname + window.location.search;
+                    const initialUrl = this.normalizeUrl(window.location.pathname + window.location.search);
                     const initialContentEl = document.getElementById('initial-page-content');
                     
                     this.loadTabsFromStorage();
 
-                    let currentTab = this.tabs.find(t => t.url === initialUrl);
+                    let currentTab = this.tabs.find(t => this.normalizeUrl(t.url) === initialUrl);
 
                     if (!currentTab && (initialUrl === '/' || initialUrl === '/home')) {
                         currentTab = this.tabs.find(t => t.url === '/' || t.url === '/home');
@@ -144,7 +145,7 @@
                         let initialTitle = document.title.replace('FLOWORK - ', '').trim();
                         let isClosable = true;
 
-                        if (window.location.pathname === '/' || window.location.pathname === '/home') {
+                        if (initialUrl === '/' || initialUrl === '/home') {
                             initialTitle = "대시보드";
                             isClosable = false;
                         } else {
@@ -156,7 +157,7 @@
                         currentTab = { id: tabId, url: initialUrl, title: initialTitle, isClosable: isClosable };
                         this.tabs.push(currentTab);
                     } else {
-                        currentTab.url = initialUrl;
+                        currentTab.url = initialUrl; // Update URL to exact match
                     }
 
                     if (initialContentEl) {
@@ -165,8 +166,16 @@
 
                     this.saveTabsToStorage();
                     this.renderTabsUI();
-                    this.activateTab(currentTab.id, false);
+                    
+                    // 초기 로드 시에는 fetchPage 없이 활성화만 수행
+                    this.activateTab(currentTab.id, false, false); 
                     this.bindEvents();
+                },
+
+                normalizeUrl(url) {
+                    // 쿼리스트링 순서 등 미세한 차이 무시하고 path 비교 위주, 혹은 끝의 / 제거
+                    if(!url) return '';
+                    return url.replace(/\/$/, ""); 
                 },
 
                 bindEvents() {
@@ -186,13 +195,17 @@
                     });
 
                     window.addEventListener('popstate', () => {
-                        const path = window.location.pathname + window.location.search;
-                        const existingTab = this.tabs.find(t => t.url === path);
+                        this.isPopStateProcessing = true;
+                        const path = this.normalizeUrl(window.location.pathname + window.location.search);
+                        const existingTab = this.tabs.find(t => this.normalizeUrl(t.url) === path);
+                        
                         if (existingTab) {
                             this.activateTab(existingTab.id, false);
                         } else {
+                            // 히스토리엔 있는데 탭 목록에 없으면 새로 염 (제목은 임시)
                             this.open(path, 'Loading...', false);
                         }
+                        this.isPopStateProcessing = false;
                     });
 
                     this.container.addEventListener('click', (e) => {
@@ -206,7 +219,9 @@
                             e.stopPropagation();
                             this.closeTab(id);
                         } else {
-                            this.activateTab(id);
+                            if (this.activeTabId !== id) {
+                                this.activateTab(id);
+                            }
                         }
                     });
                 },
@@ -219,9 +234,11 @@
                     const uniqueTabs = [];
                     const seenUrls = new Set();
                     
+                    // 역순으로 순회하여 최신 탭 유지 (또는 정순) - 여기선 정순 유지하되 중복 제거
                     this.tabs.forEach(t => {
-                        if (!seenUrls.has(t.url)) {
-                            seenUrls.add(t.url);
+                        const normUrl = this.normalizeUrl(t.url);
+                        if (!seenUrls.has(normUrl)) {
+                            seenUrls.add(normUrl);
                             uniqueTabs.push({
                                 id: t.id,
                                 url: t.url,
@@ -268,16 +285,22 @@
 
                 open(url, title, pushState = true) {
                     if (!url || url === '#') return;
+                    
+                    // [중요] 이전 요청 취소
+                    if (this.abortController) {
+                        this.abortController.abort();
+                        this.abortController = null;
+                        // 로딩바 초기화
+                        this.loader.style.width = '0';
+                    }
 
-                    const existingTab = this.tabs.find(t => t.url === url);
+                    const normalizedUrl = this.normalizeUrl(url);
+                    const existingTab = this.tabs.find(t => this.normalizeUrl(t.url) === normalizedUrl);
                     
                     if (existingTab) {
+                        // 이미 탭이 있으면 그 탭을 활성화하고 끝냄 (중복 fetch 방지)
                         this.activateTab(existingTab.id, pushState);
-                        const offcanvasEl = document.getElementById('mobileMenuSidebar');
-                        if (offcanvasEl) {
-                            const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
-                            if (bsOffcanvas) bsOffcanvas.hide();
-                        }
+                        this.closeMobileMenu();
                         return;
                     }
 
@@ -286,13 +309,16 @@
                     }
 
                     let isClosable = true;
-                    if (url === '/' || url === '/home') {
+                    if (normalizedUrl === '' || normalizedUrl === '/' || normalizedUrl === '/home') {
                         title = "대시보드";
                         isClosable = false;
                     }
 
                     this.fetchPage(url, title, isClosable);
-                    
+                    this.closeMobileMenu();
+                },
+
+                closeMobileMenu() {
                     const offcanvasEl = document.getElementById('mobileMenuSidebar');
                     if (offcanvasEl) {
                         const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
@@ -301,9 +327,6 @@
                 },
 
                 async fetchPage(url, title, isClosable) {
-                    if (this.abortController) {
-                        this.abortController.abort();
-                    }
                     this.abortController = new AbortController();
                     const signal = this.abortController.signal;
 
@@ -318,6 +341,9 @@
                         if (!res.ok) throw new Error(`Failed to load ${url}`);
 
                         const html = await res.text();
+                        
+                        if (signal.aborted) return; // 이미 취소된 요청이면 무시
+
                         this.loader.style.width = '70%';
 
                         const parser = new DOMParser();
@@ -334,28 +360,42 @@
                             else contentHtml = doc.body.innerHTML;
                         }
 
-                        this.createNewTab(url, title, contentHtml, isClosable);
-
-                        const scriptContainer = doc.getElementById('page-scripts');
-                        if (scriptContainer) {
-                            this.executeScripts(scriptContainer);
+                        // [중요] 탭 생성 직전에 한 번 더 체크 (그 사이 닫았을 수 있음)
+                        if (!signal.aborted) {
+                            this.createNewTab(url, title, contentHtml, isClosable);
+                            
+                            const scriptContainer = doc.getElementById('page-scripts');
+                            if (scriptContainer) {
+                                this.executeScripts(scriptContainer);
+                            }
                         }
 
                     } catch (error) {
-                        if (error.name === 'AbortError') return;
+                        if (error.name === 'AbortError') {
+                            console.log('Fetch aborted:', url);
+                            return; 
+                        }
+                        console.error("Page Load Error:", error);
                         if(window.Flowork) Flowork.toast('페이지 로드 실패', 'danger');
                     } finally {
-                        if (!signal.aborted) {
+                        if (signal && !signal.aborted) {
                             this.loader.style.width = '100%';
                             setTimeout(() => { this.loader.style.width = '0'; }, 200);
+                            this.abortController = null;
                         }
                     }
                 },
 
                 createNewTab(url, title, contentHtml, isClosable) {
-                    const existingTab = this.tabs.find(t => t.url === url);
+                    // 중복 체크
+                    const normalizedUrl = this.normalizeUrl(url);
+                    const existingTab = this.tabs.find(t => this.normalizeUrl(t.url) === normalizedUrl);
+                    
                     if (existingTab) {
                         this.activateTab(existingTab.id);
+                        // 내용 업데이트 (선택 사항, 여기선 리로드 효과를 위해 업데이트)
+                        const contentEl = document.getElementById(`page-${existingTab.id}`);
+                        if(contentEl) contentEl.innerHTML = `<div class="unique-content-area">${contentHtml}</div>`;
                         return;
                     }
 
@@ -400,7 +440,7 @@
                     this.container.appendChild(tabEl);
                 },
 
-                activateTab(id, pushState = true) {
+                activateTab(id, pushState = true, fetchIfNeeded = true) {
                     this.activeTabId = id;
 
                     this.container.querySelectorAll('.chrome-tab').forEach(el => {
@@ -410,7 +450,8 @@
                     this.pageWrapper.querySelectorAll('.page-content-layer').forEach(el => {
                         if (el.id === `page-${id}`) {
                             el.style.display = 'block';
-                            if (el.innerHTML.trim() === '') {
+                            // 빈 페이지라면 fetch 시도 (새로고침 후 복원 시 등)
+                            if (fetchIfNeeded && el.innerHTML.trim() === '') {
                                 const tab = this.tabs.find(t => t.id === id);
                                 if(tab) this.fetchPage(tab.url, tab.title, tab.isClosable);
                             }
@@ -423,7 +464,9 @@
                     if (tab) {
                         document.title = `FLOWORK - ${tab.title}`;
                         this.updateNavHighlight(tab.url);
-                        if(pushState) history.replaceState(null, '', tab.url);
+                        if(pushState && !this.isPopStateProcessing) {
+                            history.replaceState(null, '', tab.url);
+                        }
                     }
                 },
 
@@ -431,8 +474,17 @@
                     const idx = this.tabs.findIndex(t => t.id === id);
                     if (idx === -1) return;
 
-                    if (this.tabs[idx].isClosable === false) return;
+                    const tabToClose = this.tabs[idx];
+                    if (tabToClose.isClosable === false) return;
 
+                    // 현재 로딩중인 탭을 닫는다면 로딩 취소
+                    if (this.abortController && this.activeTabId === id) {
+                        this.abortController.abort();
+                        this.abortController = null;
+                        this.loader.style.width = '0';
+                    }
+
+                    // 현재 활성 탭 클린업
                     if (this.activeTabId === id && window.CurrentApp && typeof window.CurrentApp.destroy === 'function') {
                         try {
                             window.CurrentApp.destroy();
@@ -440,31 +492,39 @@
                         } catch (e) {}
                     }
 
+                    // DOM 제거
                     const tabEl = this.container.querySelector(`.chrome-tab[data-id="${id}"]`);
                     if (tabEl) tabEl.remove();
 
                     const contentEl = document.getElementById(`page-${id}`);
                     if (contentEl) contentEl.remove();
 
+                    // 배열 및 스토리지에서 제거
                     this.tabs.splice(idx, 1);
                     this.saveTabsToStorage();
 
+                    // 닫은 탭이 활성 탭이었다면 다른 탭 활성화
                     if (this.activeTabId === id) {
                         if (this.tabs.length > 0) {
+                            // 바로 왼쪽 탭, 없으면 첫번째
                             const nextTab = this.tabs[Math.max(0, idx - 1)];
                             this.activateTab(nextTab.id);
                         } else {
+                            // 탭이 하나도 없으면 홈으로 (보통 대시보드가 안 닫히므로 여기 올 일은 드뭄)
                             window.location.href = '/'; 
                         }
                     }
                 },
 
                 updateNavHighlight(url) {
+                    // 쿼리스트링 제외하고 비교
                     const cleanUrl = url.split('?')[0];
                     document.querySelectorAll('.list-group-item, .nav-link').forEach(link => {
                         const href = link.getAttribute('href');
                         if (!href) return;
-                        if (href === url || (href !== '/' && url.startsWith(href))) {
+                        
+                        const cleanHref = href.split('?')[0];
+                        if (cleanHref === cleanUrl || (cleanHref !== '/' && cleanUrl.startsWith(cleanHref))) {
                             link.classList.add('active');
                         } else {
                             link.classList.remove('active');
@@ -474,6 +534,7 @@
 
                 executeScripts(container) {
                     if (window.CurrentApp && typeof window.CurrentApp.destroy === 'function') {
+                        // 이전 앱 인스턴스 정리 로직이 필요하다면 여기서 호출
                     }
 
                     const scripts = container.querySelectorAll('script');
@@ -485,6 +546,7 @@
                         newScript.appendChild(document.createTextNode(oldScript.innerHTML));
                         document.body.appendChild(newScript);
                         
+                        // 외부 스크립트가 아닌 인라인 스크립트는 실행 후 정리
                         if (!newScript.src) {
                             setTimeout(() => newScript.remove(), 1000); 
                         }
