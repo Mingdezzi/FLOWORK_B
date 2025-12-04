@@ -503,10 +503,10 @@ if (!window.SalesApp) {
                 const tr = document.createElement('tr');
                 
                 tr.innerHTML = `
-                    <td class="d-none d-md-table-cell align-middle text-muted small p-1 text-center">${idx + 1}</td>
+                    <td class="align-middle text-muted small p-1 text-center d-none d-md-table-cell">${idx + 1}</td>
                     
                     <td class="align-middle p-1 text-center">
-                        <div class="fw-bold text-truncate mx-auto" style="width:100%; max-width:120px; font-size:0.85rem;">${item.product_name}</div>
+                        <div class="fw-bold text-truncate mx-auto" style="width:100%; max-width:150px; font-size:0.85rem;">${item.product_name}</div>
                         <div class="text-muted text-truncate mx-auto" style="font-size:0.7rem; max-width:100px;">${item.product_number}</div>
                     </td>
                     
