@@ -4,7 +4,6 @@ from logging.handlers import RotatingFileHandler
 from flask import Flask
 from flask_wtf.csrf import CSRFProtect
 from .config import Config
-# [수정] celery -> celery_app 으로 임포트 수정
 from .extensions import db, login_manager, celery_app, migrate, cache, csrf
 from .blueprints.auth import auth_bp
 from .blueprints.ui import ui_bp
@@ -21,10 +20,8 @@ def create_app(config_class=Config):
     cache.init_app(app)
     csrf.init_app(app)
 
-    # [수정] celery_app 설정 업데이트
     celery_app.conf.update(app.config)
     
-    # [중요] Celery 태스크에서 DB 접근을 위해 앱 참조 저장
     celery_app.flask_app = app
 
     app.register_blueprint(auth_bp)
@@ -46,7 +43,10 @@ def create_app(config_class=Config):
         
     if not app.debug and not app.testing:
         if not os.path.exists('logs'):
-            os.mkdir('logs')
+            try:
+                os.makedirs('logs', exist_ok=True)
+            except OSError:
+                pass
         file_handler = RotatingFileHandler('logs/flowork.log', maxBytes=102400, backupCount=10)
         file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
         file_handler.setLevel(logging.INFO)

@@ -1,5 +1,4 @@
 services:
-  # [추가] Nginx 리버스 프록시 서비스
   nginx:
     image: nginx:1.25-alpine
     container_name: flowork_nginx
@@ -8,7 +7,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./flowork/static:/app/flowork/static # 정적 파일 직접 서빙용
+      - ./flowork/static:/app/flowork/static 
     depends_on:
       - web
 
@@ -16,9 +15,6 @@ services:
     build: .
     container_name: flowork_app
     restart: always
-    # [수정] 포트 매핑 제거 (Nginx를 통해서만 접근)
-    # ports:
-    #   - "80:5000"
     expose:
       - "5000"
     env_file:
@@ -76,8 +72,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - /dev/shm:/dev/shm
-    ports:
-      - "5432:5432"
 
   redis:
     image: redis:7-alpine

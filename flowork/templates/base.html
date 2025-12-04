@@ -106,7 +106,6 @@
     <script>
         window.CurrentApp = null;
         
-        // [추가] 글로벌 로딩 제어 함수
         window.showGlobalLoading = function(show) {
             const el = document.getElementById('global-loading-overlay');
             if (el) el.style.display = show ? 'flex' : 'none';
@@ -124,6 +123,7 @@
                 pageWrapper: document.getElementById('page-container-wrapper'),
                 loader: document.querySelector('.spa-loader .bar'),
                 isInitRun: false,
+                abortController: null,
 
                 init() {
                     if (this.isInitRun) return;
@@ -244,7 +244,6 @@
                                 this.tabs = parsed;
                             }
                         } catch(e) {
-                            console.error("Tab storage parse error", e);
                             this.tabs = [];
                         }
                     }
@@ -274,6 +273,11 @@
                     
                     if (existingTab) {
                         this.activateTab(existingTab.id, pushState);
+                        const offcanvasEl = document.getElementById('mobileMenuSidebar');
+                        if (offcanvasEl) {
+                            const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                            if (bsOffcanvas) bsOffcanvas.hide();
+                        }
                         return;
                     }
 
@@ -297,11 +301,18 @@
                 },
 
                 async fetchPage(url, title, isClosable) {
+                    if (this.abortController) {
+                        this.abortController.abort();
+                    }
+                    this.abortController = new AbortController();
+                    const signal = this.abortController.signal;
+
                     this.loader.style.width = '30%';
                     
                     try {
                         const res = await fetch(url, {
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                            signal: signal
                         });
                         
                         if (!res.ok) throw new Error(`Failed to load ${url}`);
@@ -331,11 +342,13 @@
                         }
 
                     } catch (error) {
-                        console.error("Page Load Error:", error);
+                        if (error.name === 'AbortError') return;
                         if(window.Flowork) Flowork.toast('페이지 로드 실패', 'danger');
                     } finally {
-                        this.loader.style.width = '100%';
-                        setTimeout(() => { this.loader.style.width = '0'; }, 200);
+                        if (!signal.aborted) {
+                            this.loader.style.width = '100%';
+                            setTimeout(() => { this.loader.style.width = '0'; }, 200);
+                        }
                     }
                 },
 
