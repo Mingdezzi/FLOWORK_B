@@ -327,10 +327,12 @@ if (!window.SalesApp) {
                 data.results.forEach(item => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td class="fw-bold">${item.product_number}</td>
-                        <td><div class="text-truncate" style="max-width: 120px;">${item.product_name}</div></td>
-                        <td><span class="badge bg-light text-dark border">${item.color}</span></td>
-                        <td class="text-center fw-bold text-primary">${item.stat_qty}</td>
+                        <td class="text-center align-middle fw-bold">${item.product_number}</td>
+                        <td class="text-center align-middle">
+                            <div style="font-size:0.85rem;">${item.product_name}</div>
+                        </td>
+                        <td class="text-center align-middle"><span class="badge bg-light text-dark border">${item.color}</span></td>
+                        <td class="text-center align-middle fw-bold text-primary">${item.stat_qty}</td>
                     `;
                     tr.onclick = () => this.handleResultClick(item);
                     this.dom.leftTbody.appendChild(tr);
@@ -503,14 +505,14 @@ if (!window.SalesApp) {
                 const tr = document.createElement('tr');
                 
                 tr.innerHTML = `
-                    <td class="text-start align-middle p-1 ps-2">
-                        <div class="fw-bold text-truncate mx-auto" style="width:100%; max-width:180px; font-size:0.85rem;">${item.product_name}</div>
-                        <div class="text-muted text-truncate mx-auto" style="font-size:0.7rem; max-width:100px;">${item.product_number}</div>
+                    <td class="text-center align-middle p-1 ps-2">
+                        <div class="fw-bold" style="font-size:0.85rem;">${item.product_name}</div>
+                        <div class="text-muted" style="font-size:0.7rem;">${item.product_number}</div>
                     </td>
                     
                     <td class="align-middle p-1 text-center">
                         <div class="fw-bold text-dark" style="font-size:0.8rem;">${item.size}</div>
-                        <div class="text-muted text-truncate mx-auto" style="font-size:0.65rem; max-width:40px;">${item.color}</div>
+                        <div class="text-muted text-truncate mx-auto" style="font-size:0.65rem;">${item.color}</div>
                     </td>
                     
                     <td class="align-middle text-center p-1">
