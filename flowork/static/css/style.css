@@ -407,11 +407,12 @@ body.edit-mode #add-variant-row { display: table-row; }
     vertical-align: middle;
 }
 
-.btn-qty-inc, .btn-qty-dec {
-    width: 30px;
-    padding: 0 !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
+.sales-table th {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.2rem;
+    vertical-align: middle;
+}
+.sales-table td {
+    padding: 0.4rem 0.2rem;
+    vertical-align: middle;
 }

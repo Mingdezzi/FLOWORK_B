@@ -501,47 +501,49 @@ if (!window.SalesApp) {
                 }
 
                 const tr = document.createElement('tr');
+                
+                // [수정] 8개 열 구조, 내용 병합, 너비 최적화 반영
                 tr.innerHTML = `
-                    <td class="align-middle text-muted small">${idx + 1}</td>
+                    <td class="d-none d-md-table-cell align-middle text-muted small">${idx + 1}</td>
                     
                     <td class="text-start align-middle">
-                        <div class="fw-bold text-truncate" style="max-width:120px; font-size:0.95rem;">${item.product_name}</div>
-                        <div class="small text-muted" style="font-size:0.75rem;">${item.product_number}</div>
+                        <div class="fw-bold text-truncate" style="max-width:100px; font-size:0.9rem;">${item.product_name}</div>
+                        <div class="small text-muted" style="font-size:0.7rem;">${item.product_number}</div>
                     </td>
                     
                     <td class="align-middle">
-                        <div class="fw-bold text-dark">${item.size}</div>
-                        <div class="small text-muted">${item.color}</div>
+                        <div class="fw-bold text-dark" style="font-size:0.9rem;">${item.size}</div>
+                        <div class="small text-muted" style="font-size:0.75rem;">${item.color}</div>
                     </td>
                     
                     <td class="align-middle text-end">
-                        <div class="fw-bold text-dark">${window.Flowork.fmtNum(sale)}</div>
-                        ${org > sale ? `<div class="small text-decoration-line-through text-muted" style="font-size:0.75rem;">${window.Flowork.fmtNum(org)}</div>` : ''}
+                        <div class="fw-bold text-dark" style="font-size:0.9rem;">${window.Flowork.fmtNum(sale)}</div>
+                        ${org > sale ? `<div class="small text-decoration-line-through text-muted" style="font-size:0.7rem;">${window.Flowork.fmtNum(org)}</div>` : ''}
                     </td>
                     
                     <td class="align-middle">
                         <input type="tel" class="form-control form-control-sm text-center cart-input disc-in px-0" 
                                value="${item.discount_amount}" data-idx="${idx}" readonly 
-                               style="width: 50px; font-weight:bold; color:#eb6864; background:#fff;">
-                        ${discountRate > 0 ? `<div class="small text-danger fw-bold" style="font-size:0.7rem;">-${discountRate}%</div>` : ''}
+                               style="width: 100%; font-weight:bold; color:#eb6864; background:#f8f9fa; border:1px solid #ced4da;">
+                        ${discountRate > 0 ? `<div class="small text-danger fw-bold" style="font-size:0.7rem; margin-top:2px;">-${discountRate}%</div>` : ''}
                     </td>
                     
                     <td class="align-middle">
-                        <div class="input-group input-group-sm flex-nowrap" style="width: 100px; margin:0 auto;">
-                            <button class="btn btn-outline-secondary px-2 btn-qty-dec" type="button" data-idx="${idx}"><i class="bi bi-dash"></i></button>
-                            <input type="text" class="form-control text-center px-0 fw-bold bg-white" value="${item.quantity}" readonly>
-                            <button class="btn btn-outline-secondary px-2 btn-qty-inc" type="button" data-idx="${idx}"><i class="bi bi-plus"></i></button>
+                        <div class="input-group input-group-sm flex-nowrap justify-content-center">
+                            <button class="btn btn-outline-secondary px-1 btn-qty-dec" type="button" data-idx="${idx}" style="width:24px;"><i class="bi bi-dash"></i></button>
+                            <input type="text" class="form-control text-center px-0 fw-bold bg-white" value="${item.quantity}" readonly style="max-width:36px; font-size:0.9rem;">
+                            <button class="btn btn-outline-secondary px-1 btn-qty-inc" type="button" data-idx="${idx}" style="width:24px;"><i class="bi bi-plus"></i></button>
                         </div>
                     </td>
 
                     <td class="align-middle">
-                        <div class="text-primary fw-bold">${item.stock}</div>
-                        <div class="text-muted small" style="font-size:0.75rem;">HQ:${item.hq_stock}</div>
+                        <div class="text-primary fw-bold" style="font-size:0.9rem;">${item.stock}</div>
+                        <div class="text-muted small" style="font-size:0.7rem;">HQ:${item.hq_stock}</div>
                     </td>
                     
                     <td class="align-middle">
                         <button type="button" class="btn btn-link text-danger p-0 btn-del" data-idx="${idx}">
-                            <i class="bi bi-x-circle-fill fs-5"></i>
+                            <i class="bi bi-trash fs-5"></i>
                         </button>
                     </td>
                 `;

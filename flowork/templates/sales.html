@@ -21,7 +21,7 @@
         "salesSettings": "{{ url_for("api.sales_settings") }}"
      }'>
      
-    <div class="row g-3 h-100 m-0">
+    <div class="row g-2 h-100 m-0">
         <div class="col-lg-5 col-md-5 d-flex flex-column sales-panel active h-100 p-0 pe-lg-2" id="sales-left-panel">
             {% if not current_user.store_id %}
             <div class="mb-2 flex-shrink-0">
@@ -34,35 +34,35 @@
             </div>
             {% endif %}
 
-            <div class="d-flex gap-2 mb-2 flex-shrink-0">
+            <div class="d-flex gap-1 mb-2 flex-shrink-0">
                 <div class="flex-grow-1" id="date-area-sales">
                     <input type="date" id="sale-date" class="form-control form-control-sm fw-bold" title="판매일자">
                 </div>
                 <div class="flex-grow-1" id="date-area-refund" style="display: none;">
                     <div class="input-group input-group-sm">
-                        <input type="date" id="refund-start" class="form-control">
-                        <input type="date" id="refund-end" class="form-control">
+                        <input type="date" id="refund-start" class="form-control px-1">
+                        <input type="date" id="refund-end" class="form-control px-1">
                     </div>
                 </div>
                 <div class="btn-group btn-group-sm" role="group">
                     <input type="radio" class="btn-check" name="mode-switch" id="mode-sales" autocomplete="off" checked>
-                    <label class="btn btn-outline-primary fw-bold" for="mode-sales">판매</label>
+                    <label class="btn btn-outline-primary fw-bold px-2" for="mode-sales">판매</label>
                     <input type="radio" class="btn-check" name="mode-switch" id="mode-refund" autocomplete="off">
-                    <label class="btn btn-outline-danger fw-bold" for="mode-refund">환불</label>
+                    <label class="btn btn-outline-danger fw-bold px-2" for="mode-refund">환불</label>
                 </div>
             </div>
 
             <div class="input-group input-group-lg mb-2 shadow-sm flex-shrink-0">
-                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                <input type="text" id="search-input" class="form-control border-start-0" placeholder="상품 바코드 또는 품번 스캔/입력" autocomplete="off">
-                <button class="btn btn-dark px-4" id="btn-search">검색</button>
+                <span class="input-group-text bg-white border-end-0 ps-3 pe-2"><i class="bi bi-search"></i></span>
+                <input type="text" id="search-input" class="form-control border-start-0 ps-1" placeholder="바코드/품번" autocomplete="off">
+                <button class="btn btn-dark px-3" id="btn-search">검색</button>
             </div>
 
             <div class="left-table-wrapper custom-scrollbar border rounded bg-white shadow-sm flex-grow-1" style="min-height: 0;">
-                <table class="table table-hover mb-0 sticky-header" style="font-size: 0.9rem;">
+                <table class="table table-hover mb-0 sticky-header" style="font-size: 0.85rem;">
                     <thead class="table-light sticky-top">
                         <tr class="text-center">
-                            <th style="width: 25%">품번</th>
+                            <th style="width: 30%">품번</th>
                             <th>품명</th>
                             <th style="width: 15%">컬러</th>
                             <th style="width: 15%">재고</th>
@@ -77,27 +77,27 @@
 
         <div class="col-lg-7 col-md-7 d-flex flex-column sales-panel h-100 p-0 ps-lg-2" id="sales-right-panel">
             <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-white rounded shadow-sm border flex-shrink-0">
-                <div class="fw-bold text-dark d-flex align-items-center">
-                    <i class="bi bi-basket2-fill me-2 fs-5 text-primary"></i>판매 리스트
+                <div class="fw-bold text-dark d-flex align-items-center small">
+                    <i class="bi bi-basket2-fill me-2 fs-6 text-primary"></i>리스트
                 </div>
                 <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-outline-secondary py-1" id="btn-toggle-online" style="font-size: 0.8rem;">OFFLINE</button>
-                    <button class="btn btn-sm btn-danger py-1" id="btn-clear-cart" style="font-size: 0.8rem;"><i class="bi bi-trash me-1"></i>비우기</button>
+                    <button class="btn btn-sm btn-outline-secondary py-0 px-2" id="btn-toggle-online" style="font-size: 0.75rem;">OFFLINE</button>
+                    <button class="btn btn-sm btn-danger py-0 px-2" id="btn-clear-cart" style="font-size: 0.75rem;"><i class="bi bi-trash me-1"></i>비우기</button>
                 </div>
             </div>
 
             <div class="cart-table-wrapper custom-scrollbar border rounded bg-white shadow-sm mb-2 flex-grow-1" style="min-height: 0; overflow-y: auto;">
-                <table class="table table-hover table-striped mb-0 text-center align-middle" style="font-size: 0.85rem;">
+                <table class="table table-hover table-striped mb-0 text-center align-middle sales-table" style="font-size: 0.8rem; table-layout: fixed;">
                     <thead class="table-dark sticky-top" style="z-index: 10;">
                         <tr>
-                            <th style="width: 30px;">#</th>
-                            <th>상품정보</th>
-                            <th style="width: 60px;">옵션<br><span style="font-size:0.7em; font-weight:normal;">(사이즈/컬러)</span></th>
-                            <th style="width: 70px;">단가<br><span style="font-size:0.7em; font-weight:normal;">(판매/최초)</span></th>
-                            <th style="width: 60px;">할인</th>
-                            <th style="width: 110px;">수량</th>
-                            <th style="width: 50px;">재고<br><span style="font-size:0.7em; font-weight:normal;">(매장/본사)</span></th>
-                            <th style="width: 40px;"><i class="bi bi-trash"></i></th>
+                            <th class="d-none d-md-table-cell" style="width: 30px;">#</th>
+                            <th style="width: auto;">상품</th>
+                            <th style="width: 50px;">옵션</th>
+                            <th style="width: 65px;">단가</th>
+                            <th style="width: 45px;">할인</th>
+                            <th style="width: 85px;">수량</th>
+                            <th style="width: 45px;">재고</th>
+                            <th style="width: 35px;"><i class="bi bi-trash"></i></th>
                         </tr>
                     </thead>
                     <tbody id="cart-tbody"></tbody>
@@ -106,28 +106,27 @@
 
             <div class="card bg-white border shadow-sm flex-shrink-0 mt-auto">
                 <div class="card-body p-2">
-                    
                     <div id="sales-actions-top" class="d-flex gap-2 mb-2 justify-content-end">
-                        <button class="btn btn-sm btn-outline-warning fw-bold px-3" id="btn-hold-sale">
+                        <button class="btn btn-sm btn-outline-warning fw-bold px-3 py-1" id="btn-hold-sale" style="font-size: 0.85rem;">
                             <i class="bi bi-pause-circle me-1"></i>보류
                         </button>
-                        <button class="btn btn-sm btn-outline-primary fw-bold px-3" id="btn-apply-discount">
-                            <i class="bi bi-tag me-1"></i>규칙 할인
+                        <button class="btn btn-sm btn-outline-primary fw-bold px-3 py-1" id="btn-apply-discount" style="font-size: 0.85rem;">
+                            <i class="bi bi-tag me-1"></i>규칙할인
                         </button>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-end mb-2 border-top pt-2">
-                        <div class="fs-6 text-muted ms-2">총 수량: <b id="total-qty" class="text-dark fs-5">0</b></div>
-                        <div class="text-end me-2">
+                        <div class="fs-6 text-muted ms-1 small">총 수량: <b id="total-qty" class="text-dark">0</b></div>
+                        <div class="text-end me-1">
                             <span class="small text-muted me-2">결제금액</span>
-                            <span class="display-6 fw-bold text-primary lh-1" style="font-size: 1.8rem;">
+                            <span class="fw-bold text-primary lh-1" style="font-size: 1.5rem;">
                                 <span id="total-amount">0</span><span class="fs-6 ms-1 text-dark">원</span>
                             </span>
                         </div>
                     </div>
 
                     <div id="sales-actions-bottom">
-                        <button class="btn btn-primary w-100 py-3 fs-5 fw-bold shadow-sm" id="btn-submit-sale">
+                        <button class="btn btn-primary w-100 py-3 fw-bold shadow-sm" id="btn-submit-sale" style="font-size: 1.1rem;">
                             <i class="bi bi-credit-card-2-back me-2"></i>결제 완료
                         </button>
                     </div>
@@ -135,11 +134,11 @@
                     <div id="refund-actions" style="display: none;">
                         <div class="alert alert-danger py-2 px-3 mb-2 d-flex align-items-center">
                             <i class="bi bi-info-circle-fill me-2 fs-5"></i>
-                            <div class="text-truncate flex-grow-1 fw-bold" id="refund-target-info">선택된 영수증 없음</div>
+                            <div class="text-truncate flex-grow-1 fw-bold small" id="refund-target-info">영수증 미선택</div>
                         </div>
                         <div class="row g-2">
-                            <div class="col-8"><button class="btn btn-danger w-100 py-3 fw-bold" id="btn-submit-refund">환불 처리</button></div>
-                            <div class="col-4"><button class="btn btn-secondary w-100 py-3" id="btn-cancel-refund">취소</button></div>
+                            <div class="col-8"><button class="btn btn-danger w-100 py-2 fw-bold" id="btn-submit-refund">환불 처리</button></div>
+                            <div class="col-4"><button class="btn btn-secondary w-100 py-2" id="btn-cancel-refund">취소</button></div>
                         </div>
                     </div>
                 </div>
@@ -156,7 +155,7 @@
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content shadow">
             <div class="modal-header py-2 bg-light">
-                <h6 class="modal-title fw-bold">수량/금액 입력</h6>
+                <h6 class="modal-title fw-bold">숫자 입력</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
