@@ -503,10 +503,8 @@ if (!window.SalesApp) {
                 const tr = document.createElement('tr');
                 
                 tr.innerHTML = `
-                    <td class="align-middle text-muted small p-1 text-center d-none d-md-table-cell">${idx + 1}</td>
-                    
-                    <td class="align-middle p-1 text-center">
-                        <div class="fw-bold text-truncate mx-auto" style="width:100%; max-width:150px; font-size:0.85rem;">${item.product_name}</div>
+                    <td class="text-start align-middle p-1 ps-2">
+                        <div class="fw-bold text-truncate mx-auto" style="width:100%; max-width:180px; font-size:0.85rem;">${item.product_name}</div>
                         <div class="text-muted text-truncate mx-auto" style="font-size:0.7rem; max-width:100px;">${item.product_number}</div>
                     </td>
                     
@@ -515,7 +513,7 @@ if (!window.SalesApp) {
                         <div class="text-muted text-truncate mx-auto" style="font-size:0.65rem; max-width:40px;">${item.color}</div>
                     </td>
                     
-                    <td class="align-middle p-1 text-center">
+                    <td class="align-middle text-center p-1">
                         <div class="fw-bold text-dark" style="font-size:0.8rem;">${window.Flowork.fmtNum(sale)}</div>
                         ${org > sale ? `<div class="text-decoration-line-through text-muted" style="font-size:0.65rem;">${window.Flowork.fmtNum(org)}</div>` : ''}
                     </td>
@@ -529,9 +527,9 @@ if (!window.SalesApp) {
                     
                     <td class="align-middle p-1 text-center">
                         <div class="input-group input-group-sm flex-nowrap justify-content-center m-0" style="width: 100%;">
-                            <button class="btn btn-outline-secondary btn-qty-dec p-0" type="button" data-idx="${idx}" style="width:24px; height:28px;"><i class="bi bi-dash"></i></button>
-                            <input type="text" class="form-control text-center p-0 fw-bold bg-white m-0" value="${item.quantity}" readonly style="width:30px; height:28px; font-size:0.9rem; flex:none;">
-                            <button class="btn btn-outline-secondary btn-qty-inc p-0" type="button" data-idx="${idx}" style="width:24px; height:28px;"><i class="bi bi-plus"></i></button>
+                            <button class="btn btn-outline-secondary btn-qty-dec p-0" type="button" data-idx="${idx}" style="width:20px; height:28px;"><i class="bi bi-dash"></i></button>
+                            <input type="text" class="form-control text-center p-0 fw-bold bg-white m-0" value="${item.quantity}" readonly style="width:24px; height:28px; font-size:0.85rem; flex:none;">
+                            <button class="btn btn-outline-secondary btn-qty-inc p-0" type="button" data-idx="${idx}" style="width:20px; height:28px;"><i class="bi bi-plus"></i></button>
                         </div>
                     </td>
 
@@ -542,7 +540,7 @@ if (!window.SalesApp) {
                     
                     <td class="align-middle p-1 text-center">
                         <button type="button" class="btn btn-link text-danger p-0 btn-del" data-idx="${idx}">
-                            <i class="bi bi-trash-fill fs-5"></i>
+                            <i class="bi bi-trash-fill fs-6"></i>
                         </button>
                     </td>
                 `;
