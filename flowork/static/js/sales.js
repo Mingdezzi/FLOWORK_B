@@ -5,7 +5,6 @@ if (!window.SalesApp) {
             if (!this.container) return;
             this.container.dataset.initialized = "true";
 
-            // [추가] 이벤트 리스너 관리를 위한 AbortController
             this.abortController = new AbortController();
 
             this.urls = JSON.parse(this.container.dataset.apiUrls || '{}');
@@ -18,6 +17,13 @@ if (!window.SalesApp) {
             this.refundSaleId = null;
             this.config = { amount_discounts: [] };
             
+            // 키패드 관련 상태
+            this.activeInput = null;
+            
+            // 스와이프 관련 상태
+            this.touchStartX = 0;
+            this.touchStartY = 0;
+
             this.dom = this.cacheDom();
             this.init();
         }
@@ -56,12 +62,17 @@ if (!window.SalesApp) {
                 btnDiscount: c.querySelector('#btn-apply-discount'),
                 detailModalEl: parent.querySelector('#detail-modal'),
                 recordsModalEl: parent.querySelector('#records-modal'),
-                storeSelect: c.querySelector('#admin-store-select') 
+                storeSelect: c.querySelector('#admin-store-select'),
+                
+                // 키패드 모달 요소
+                numpadModalEl: parent.querySelector('#numpad-modal'),
+                numpadDisplay: parent.querySelector('#numpad-display'),
+                numpadKeys: parent.querySelectorAll('.num-key'),
+                numpadConfirm: parent.querySelector('#btn-numpad-confirm')
             };
         }
 
         init() {
-            // [수정] AbortSignal 옵션 추가
             const signal = this.abortController.signal;
 
             if (this.dom.detailModalEl) {
@@ -76,6 +87,21 @@ if (!window.SalesApp) {
                      if(this.dom.searchInput) this.dom.searchInput.focus();
                 }, { signal });
             }
+            
+            // 키패드 모달 초기화
+            if (this.dom.numpadModalEl) {
+                this.numpadModal = new bootstrap.Modal(this.dom.numpadModalEl);
+                this.dom.numpadKeys.forEach(btn => {
+                    btn.addEventListener('click', (e) => this.handleNumpadInput(e.target.dataset.key), { signal });
+                });
+                if (this.dom.numpadConfirm) {
+                    this.dom.numpadConfirm.addEventListener('click', () => this.confirmNumpadInput(), { signal });
+                }
+            }
+
+            // 스와이프 이벤트 등록
+            this.container.addEventListener('touchstart', (e) => this.handleTouchStart(e), { signal, passive: true });
+            this.container.addEventListener('touchend', (e) => this.handleTouchEnd(e), { signal, passive: true });
 
             const today = new Date();
             const yyyy = today.getFullYear();
@@ -132,14 +158,74 @@ if (!window.SalesApp) {
             }
         }
 
-        // [추가] 정리 메서드
         destroy() {
-            this.abortController.abort(); // 모든 이벤트 리스너 제거
+            this.abortController.abort();
             if (this.detailModal) this.detailModal.dispose();
             if (this.recordsModal) this.recordsModal.dispose();
+            if (this.numpadModal) this.numpadModal.dispose();
             this.cart = null;
             this.dom = null;
             console.log('SalesApp destroyed');
+        }
+
+        // --- 스와이프 제스처 핸들러 ---
+        handleTouchStart(e) {
+            this.touchStartX = e.changedTouches[0].screenX;
+            this.touchStartY = e.changedTouches[0].screenY;
+        }
+
+        handleTouchEnd(e) {
+            if (window.innerWidth >= 992) return; // PC 화면에서는 무시
+
+            const touchEndX = e.changedTouches[0].screenX;
+            const touchEndY = e.changedTouches[0].screenY;
+            
+            const diffX = touchEndX - this.touchStartX;
+            const diffY = touchEndY - this.touchStartY;
+
+            // X축 이동이 Y축 이동보다 크고, 일정 거리 이상일 때만 스와이프 인정
+            if (Math.abs(diffX) > 50 && Math.abs(diffY) < 30) {
+                if (diffX > 0) {
+                    // 오른쪽으로 스와이프 -> 왼쪽 탭(상품검색) 보이기
+                    this.switchMobileTab('sales-left');
+                } else {
+                    // 왼쪽으로 스와이프 -> 오른쪽 탭(장바구니) 보이기
+                    this.switchMobileTab('sales-right');
+                }
+            }
+        }
+
+        // --- 키패드 로직 ---
+        openKeypad(inputElement) {
+            this.activeInput = inputElement;
+            this.dom.numpadDisplay.value = inputElement.value || '0';
+            this.numpadModal.show();
+        }
+
+        handleNumpadInput(key) {
+            let currentVal = this.dom.numpadDisplay.value;
+            
+            if (key === 'C') {
+                currentVal = '0';
+            } else if (key === 'BS') {
+                currentVal = currentVal.length > 1 ? currentVal.slice(0, -1) : '0';
+            } else {
+                if (currentVal === '0') currentVal = key;
+                else currentVal += key;
+            }
+            this.dom.numpadDisplay.value = currentVal;
+        }
+
+        confirmNumpadInput() {
+            if (this.activeInput) {
+                const newVal = this.dom.numpadDisplay.value;
+                this.activeInput.value = newVal;
+                // change 이벤트 트리거하여 장바구니 업데이트
+                const event = new Event('change');
+                this.activeInput.dispatchEvent(event);
+            }
+            this.numpadModal.hide();
+            this.activeInput = null;
         }
 
         switchMobileTab(targetId) {
@@ -421,131 +507,136 @@ if (!window.SalesApp) {
                     </td>
                     <td>${item.color}/${item.size}</td>
                     <td class="text-end small">${window.Flowork.fmtNum(sale)}</td>
-                    <td><input type="tel" class="cart-input disc-in" value="${item.discount_amount}" data-idx="${idx}"></td>
-                <td><input type="tel" class="cart-input qty-in" value="${item.quantity}" data-idx="${idx}"></td>
-                <td>
-                    <button type="button" class="btn btn-outline-danger btn-sm py-2 btn-del" style="width: 50px; font-weight:bold;" data-idx="${idx}">삭제</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
+                    <td><input type="tel" class="cart-input disc-in" value="${item.discount_amount}" data-idx="${idx}" readonly></td>
+                    <td><input type="tel" class="cart-input qty-in" value="${item.quantity}" data-idx="${idx}" readonly></td>
+                    <td>
+                        <button type="button" class="btn btn-outline-danger btn-sm py-2 btn-del" style="width: 50px; font-weight:bold;" data-idx="${idx}">삭제</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
 
-        this.dom.totalQty.textContent = window.Flowork.fmtNum(totalQty);
-        this.dom.totalAmt.textContent = window.Flowork.fmtNum(totalAmt);
-        
-        if (this.dom.mobileCartBadge) this.dom.mobileCartBadge.textContent = totalQty;
+            this.dom.totalQty.textContent = window.Flowork.fmtNum(totalQty);
+            this.dom.totalAmt.textContent = window.Flowork.fmtNum(totalAmt);
+            
+            if (this.dom.mobileCartBadge) this.dom.mobileCartBadge.textContent = totalQty;
 
-        tbody.querySelectorAll('.qty-in').forEach(el => {
-            el.onchange = (e) => {
-                const v = parseInt(e.target.value);
-                if (v > 0) { this.cart[e.target.dataset.idx].quantity = v; this.renderCart(); }
-            };
-        });
-        tbody.querySelectorAll('.disc-in').forEach(el => {
-            el.onchange = (e) => {
-                const v = parseInt(e.target.value);
-                if (v >= 0) { this.cart[e.target.dataset.idx].discount_amount = v; this.renderCart(); }
-            };
-        });
-        tbody.querySelectorAll('.btn-del').forEach(el => {
-            el.onclick = (e) => {
-                this.cart.splice(e.target.dataset.idx, 1);
-                this.renderCart();
-            };
-        });
-    }
+            // [수정] input 클릭 시 키패드 모달 오픈하도록 변경
+            tbody.querySelectorAll('.qty-in, .disc-in').forEach(el => {
+                el.onclick = (e) => {
+                    this.openKeypad(e.target);
+                };
+                // change 이벤트 수신하여 데이터 업데이트 (키패드 확인 시 발생)
+                el.onchange = (e) => {
+                    const idx = e.target.dataset.idx;
+                    const val = parseInt(e.target.value);
+                    if (e.target.classList.contains('qty-in')) {
+                        if (val > 0) this.cart[idx].quantity = val;
+                    } else {
+                        if (val >= 0) this.cart[idx].discount_amount = val;
+                    }
+                    this.renderCart();
+                };
+            });
 
-    toggleHold() {
-        const btn = this.dom.btnHold;
-        if (this.heldCart) {
-            if (confirm('보류된 판매 목록을 복원하시겠습니까?')) {
-                this.cart = JSON.parse(this.heldCart);
-                this.heldCart = null;
-                btn.textContent = '보류';
-                btn.classList.replace('btn-danger', 'btn-warning');
+            tbody.querySelectorAll('.btn-del').forEach(el => {
+                el.onclick = (e) => {
+                    this.cart.splice(e.target.dataset.idx, 1);
+                    this.renderCart();
+                };
+            });
+        }
+
+        toggleHold() {
+            const btn = this.dom.btnHold;
+            if (this.heldCart) {
+                if (confirm('보류된 판매 목록을 복원하시겠습니까?')) {
+                    this.cart = JSON.parse(this.heldCart);
+                    this.heldCart = null;
+                    btn.textContent = '보류';
+                    btn.classList.replace('btn-danger', 'btn-warning');
+                    this.renderCart();
+                }
+            } else {
+                if (this.cart.length === 0) return window.Flowork.toast('상품이 없습니다.', 'warning');
+                this.heldCart = JSON.stringify(this.cart);
+                this.cart = [];
+                btn.textContent = '복원';
+                btn.classList.replace('btn-warning', 'btn-danger');
                 this.renderCart();
             }
-        } else {
+        }
+
+        applyAutoDiscount() {
             if (this.cart.length === 0) return window.Flowork.toast('상품이 없습니다.', 'warning');
-            this.heldCart = JSON.stringify(this.cart);
-            this.cart = [];
-            btn.textContent = '복원';
-            btn.classList.replace('btn-warning', 'btn-danger');
-            this.renderCart();
-        }
-    }
+            const currentTotal = this.cart.reduce((sum, i) => sum + (i.sale_price * i.quantity), 0);
+            
+            let rule = null;
+            if (this.config.amount_discounts) {
+                rule = this.config.amount_discounts.sort((a, b) => b.limit - a.limit).find(r => currentTotal >= r.limit);
+            }
 
-    applyAutoDiscount() {
-        if (this.cart.length === 0) return window.Flowork.toast('상품이 없습니다.', 'warning');
-        const currentTotal = this.cart.reduce((sum, i) => sum + (i.sale_price * i.quantity), 0);
-        
-        let rule = null;
-        if (this.config.amount_discounts) {
-            rule = this.config.amount_discounts.sort((a, b) => b.limit - a.limit).find(r => currentTotal >= r.limit);
-        }
-
-        if (rule) {
-            window.Flowork.toast(`${window.Flowork.fmtNum(rule.limit)}원 이상: ${window.Flowork.fmtNum(rule.discount)}원 할인`, 'success');
-            this.cart[0].discount_amount += rule.discount;
-            this.renderCart();
-        } else {
-            window.Flowork.toast('적용 가능한 할인 규칙이 없습니다.', 'info');
-        }
-    }
-
-    async submitSale() {
-        if (this.cart.length === 0) return window.Flowork.toast('상품이 없습니다.', 'warning');
-        if (!confirm('판매를 등록하시겠습니까?')) return;
-
-        try {
-            const payload = {
-                items: this.cart.map(i => ({
-                    variant_id: i.variant_id,
-                    quantity: i.quantity,
-                    price: i.sale_price,
-                    discount_amount: i.discount_amount
-                })),
-                sale_date: this.dom.saleDate.value,
-                is_online: this.isOnline
-            };
-
-            const res = await this.post(this.urls.submitSales, payload);
-            if (res.status === 'success') {
-                window.Flowork.toast('판매 등록 완료', 'success');
-                this.cart = []; 
+            if (rule) {
+                window.Flowork.toast(`${window.Flowork.fmtNum(rule.limit)}원 이상: ${window.Flowork.fmtNum(rule.discount)}원 할인`, 'success');
+                this.cart[0].discount_amount += rule.discount;
                 this.renderCart();
             } else {
-                window.Flowork.toast(res.message, 'danger');
+                window.Flowork.toast('적용 가능한 할인 규칙이 없습니다.', 'info');
             }
-        } catch (e) { window.Flowork.toast('등록 실패', 'danger'); }
-    }
+        }
 
-    async submitRefund() {
-        if (!this.refundSaleId) return window.Flowork.toast('환불할 영수증을 선택하세요.', 'warning');
-        if (!confirm('전체 환불 처리하시겠습니까?')) return;
+        async submitSale() {
+            if (this.cart.length === 0) return window.Flowork.toast('상품이 없습니다.', 'warning');
+            if (!confirm('판매를 등록하시겠습니까?')) return;
 
-        try {
-            const url = this.urls.refund.replace('999999', this.refundSaleId);
-            const res = await this.post(url, {});
-            if (res.status === 'success') {
-                window.Flowork.toast('환불 완료', 'success');
-                this.resetRefund();
-            } else {
-                window.Flowork.toast(res.message, 'danger');
-            }
-        } catch (e) { window.Flowork.toast('오류 발생', 'danger'); }
-    }
+            try {
+                const payload = {
+                    items: this.cart.map(i => ({
+                        variant_id: i.variant_id,
+                        quantity: i.quantity,
+                        price: i.sale_price,
+                        discount_amount: i.discount_amount
+                    })),
+                    sale_date: this.dom.saleDate.value,
+                    is_online: this.isOnline
+                };
 
-    resetRefund() {
-        this.refundSaleId = null;
-        this.dom.refundInfo.textContent = '선택되지 않음';
-        this.cart = [];
-        this.renderCart();
-    }
+                const res = await this.post(this.urls.submitSales, payload);
+                if (res.status === 'success') {
+                    window.Flowork.toast('판매 등록 완료', 'success');
+                    this.cart = []; 
+                    this.renderCart();
+                } else {
+                    window.Flowork.toast(res.message, 'danger');
+                }
+            } catch (e) { window.Flowork.toast('등록 실패', 'danger'); }
+        }
+
+        async submitRefund() {
+            if (!this.refundSaleId) return window.Flowork.toast('환불할 영수증을 선택하세요.', 'warning');
+            if (!confirm('전체 환불 처리하시겠습니까?')) return;
+
+            try {
+                const url = this.urls.refund.replace('999999', this.refundSaleId);
+                const res = await this.post(url, {});
+                if (res.status === 'success') {
+                    window.Flowork.toast('환불 완료', 'success');
+                    this.resetRefund();
+                } else {
+                    window.Flowork.toast(res.message, 'danger');
+                }
+            } catch (e) { window.Flowork.toast('오류 발생', 'danger'); }
+        }
+
+        resetRefund() {
+            this.refundSaleId = null;
+            this.dom.refundInfo.textContent = '선택되지 않음';
+            this.cart = [];
+            this.renderCart();
+        }
     };
 }
 
 if (document.querySelector('.sales-container')) {
-    // [수정] 전역 인스턴스에 할당
     window.CurrentApp = new window.SalesApp();
 }
