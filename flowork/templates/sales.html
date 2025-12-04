@@ -87,17 +87,27 @@
             </div>
 
             <div class="cart-table-wrapper custom-scrollbar border rounded bg-white shadow-sm mb-2 flex-grow-1" style="min-height: 0; overflow-y: auto;">
-                <table class="table table-hover table-striped mb-0 text-center align-middle sales-table" style="font-size: 0.8rem; table-layout: fixed;">
+                <table class="table table-hover table-striped mb-0 text-center align-middle sales-table" style="font-size: 0.8rem; table-layout: fixed; width: 100%;">
+                    <colgroup>
+                        <col class="d-none d-md-table-column" style="width: 30px;">
+                        <col style="width: auto;">
+                        <col style="width: 45px;">
+                        <col style="width: 60px;">
+                        <col style="width: 40px;">
+                        <col style="width: 85px;">
+                        <col style="width: 40px;">
+                        <col style="width: 30px;">
+                    </colgroup>
                     <thead class="table-dark sticky-top" style="z-index: 10;">
                         <tr>
-                            <th class="pc-only-col" style="width: 30px;">#</th>
-                            <th style="width: auto;">상품</th>
-                            <th style="width: 50px;">옵션</th>
-                            <th style="width: 65px;">단가</th>
-                            <th style="width: 45px;">할인</th>
-                            <th style="width: 85px;">수량</th>
-                            <th style="width: 45px;">재고</th>
-                            <th style="width: 35px;"><i class="bi bi-trash-fill"></i></th>
+                            <th class="d-none d-md-table-cell">#</th>
+                            <th>상품</th>
+                            <th>옵션</th>
+                            <th>단가</th>
+                            <th>할인</th>
+                            <th>수량</th>
+                            <th>재고</th>
+                            <th><i class="bi bi-trash-fill"></i></th>
                         </tr>
                     </thead>
                     <tbody id="cart-tbody"></tbody>
@@ -107,10 +117,10 @@
             <div class="card bg-white border shadow-sm flex-shrink-0 mt-auto">
                 <div class="card-body p-2">
                     <div id="sales-actions-top" class="d-flex gap-2 mb-2 justify-content-end">
-                        <button class="btn btn-sm btn-outline-warning fw-bold px-3 py-1" id="btn-hold-sale" style="font-size: 0.85rem;">
+                        <button class="btn btn-sm btn-outline-warning fw-bold px-3 py-1" id="btn-hold-sale" style="font-size: 0.8rem;">
                             <i class="bi bi-pause-circle me-1"></i>보류
                         </button>
-                        <button class="btn btn-sm btn-outline-primary fw-bold px-3 py-1" id="btn-apply-discount" style="font-size: 0.85rem;">
+                        <button class="btn btn-sm btn-outline-primary fw-bold px-3 py-1" id="btn-apply-discount" style="font-size: 0.8rem;">
                             <i class="bi bi-tag me-1"></i>규칙할인
                         </button>
                     </div>
@@ -148,43 +158,10 @@
 </div>
 
 <div class="modal fade" id="detail-modal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header py-2"><h6 class="modal-title fw-bold" id="detail-modal-title">옵션 선택</h6><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0"><div class="table-responsive"><table class="table table-hover text-center mb-0" style="font-size: 0.9rem;"><thead class="table-light"><tr><th>컬러</th><th>사이즈</th><th>재고</th><th>가</th><th>선택</th></tr></thead><tbody id="detail-modal-tbody"></tbody></table></div></div></div></div></div>
-
 <div class="modal fade" id="records-modal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content"><div class="modal-header bg-danger text-white py-2"><h6 class="modal-title" id="records-modal-title">환불 대상 선택</h6><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0"><div class="table-responsive"><table class="table table-hover text-center mb-0" style="font-size: 0.85rem;"><thead class="table-light"><tr><th>날짜</th><th>영수증</th><th>상품</th><th>옵션</th><th>가</th></tr></thead><tbody id="records-modal-tbody"></tbody></table></div></div></div></div></div>
-
-<div class="modal fade" id="numpad-modal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content shadow">
-            <div class="modal-header py-2 bg-light">
-                <h6 class="modal-title fw-bold">수량/금액 입력</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0">
-                <div class="p-3 bg-white border-bottom">
-                    <input type="text" id="numpad-display" class="form-control form-control-lg text-end fw-bold" readonly value="0">
-                </div>
-                <div class="numpad-grid p-2">
-                    <button class="btn btn-light border btn-lg fw-bold num-key" data-key="1">1</button>
-                    <button class="btn btn-light border btn-lg fw-bold num-key" data-key="2">2</button>
-                    <button class="btn btn-light border btn-lg fw-bold num-key" data-key="3">3</button>
-                    <button class="btn btn-light border btn-lg fw-bold num-key" data-key="4">4</button>
-                    <button class="btn btn-light border btn-lg fw-bold num-key" data-key="5">5</button>
-                    <button class="btn btn-light border btn-lg fw-bold num-key" data-key="6">6</button>
-                    <button class="btn btn-light border btn-lg fw-bold num-key" data-key="7">7</button>
-                    <button class="btn btn-light border btn-lg fw-bold num-key" data-key="8">8</button>
-                    <button class="btn btn-light border btn-lg fw-bold num-key" data-key="9">9</button>
-                    <button class="btn btn-secondary btn-lg fw-bold num-key" data-key="C">C</button>
-                    <button class="btn btn-light border btn-lg fw-bold num-key" data-key="0">0</button>
-                    <button class="btn btn-warning btn-lg fw-bold num-key" data-key="BS"><i class="bi bi-backspace"></i></button>
-                </div>
-                <div class="p-2">
-                    <button class="btn btn-primary w-100 py-3 fw-bold fs-5" id="btn-numpad-confirm">확인</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="modal fade" id="numpad-modal" tabindex="-1" data-bs-backdrop="static"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content shadow"><div class="modal-header py-2 bg-light"><h6 class="modal-title fw-bold">숫자 입력</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0"><div class="p-3 bg-white border-bottom"><input type="text" id="numpad-display" class="form-control form-control-lg text-end fw-bold" readonly value="0"></div><div class="numpad-grid p-2"><button class="btn btn-light border btn-lg fw-bold num-key" data-key="1">1</button><button class="btn btn-light border btn-lg fw-bold num-key" data-key="2">2</button><button class="btn btn-light border btn-lg fw-bold num-key" data-key="3">3</button><button class="btn btn-light border btn-lg fw-bold num-key" data-key="4">4</button><button class="btn btn-light border btn-lg fw-bold num-key" data-key="5">5</button><button class="btn btn-light border btn-lg fw-bold num-key" data-key="6">6</button><button class="btn btn-light border btn-lg fw-bold num-key" data-key="7">7</button><button class="btn btn-light border btn-lg fw-bold num-key" data-key="8">8</button><button class="btn btn-light border btn-lg fw-bold num-key" data-key="9">9</button><button class="btn btn-secondary btn-lg fw-bold num-key" data-key="C">C</button><button class="btn btn-light border btn-lg fw-bold num-key" data-key="0">0</button><button class="btn btn-warning btn-lg fw-bold num-key" data-key="BS"><i class="bi bi-backspace"></i></button></div><div class="p-2"><button class="btn btn-primary w-100 py-3 fw-bold fs-5" id="btn-numpad-confirm">확인</button></div></div></div></div></div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/sales.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/sales.js') }}?v={{ range(1, 10000) | random }}" defer></script>
 {% endblock %}

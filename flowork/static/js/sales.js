@@ -169,7 +169,6 @@ if (!window.SalesApp) {
         }
 
         handleTouchEnd(e) {
-            // [수정] 모바일 가로 모드(PC 레이아웃)에서는 스와이프 무시
             if (window.innerWidth >= 992 || (this.dom.mobileTabs[0] && this.dom.mobileTabs[0].offsetParent === null)) return;
 
             const touchEndX = e.changedTouches[0].screenX;
@@ -502,49 +501,47 @@ if (!window.SalesApp) {
                 }
 
                 const tr = document.createElement('tr');
-                
-                // [수정] 열 구성을 8개로 정확히 맞추고 쓰레기통 아이콘 추가
                 tr.innerHTML = `
-                    <td class="pc-only-col align-middle text-muted small">${idx + 1}</td>
+                    <td class="d-none d-md-table-cell align-middle text-muted small p-1">${idx + 1}</td>
                     
-                    <td class="text-start align-middle">
-                        <div class="fw-bold text-truncate" style="max-width:100px; font-size:0.9rem;">${item.product_name}</div>
-                        <div class="small text-muted" style="font-size:0.7rem;">${item.product_number}</div>
+                    <td class="text-start align-middle p-1">
+                        <div class="fw-bold text-truncate" style="width:100%; max-width:120px; font-size:0.85rem;">${item.product_name}</div>
+                        <div class="text-muted text-truncate" style="font-size:0.7rem; max-width:100px;">${item.product_number}</div>
                     </td>
                     
-                    <td class="align-middle">
-                        <div class="fw-bold text-dark" style="font-size:0.9rem;">${item.size}</div>
-                        <div class="small text-muted" style="font-size:0.75rem;">${item.color}</div>
+                    <td class="align-middle p-1">
+                        <div class="fw-bold text-dark" style="font-size:0.8rem;">${item.size}</div>
+                        <div class="text-muted text-truncate" style="font-size:0.65rem; max-width:40px;">${item.color}</div>
                     </td>
                     
-                    <td class="align-middle text-end">
-                        <div class="fw-bold text-dark" style="font-size:0.9rem;">${window.Flowork.fmtNum(sale)}</div>
-                        ${org > sale ? `<div class="small text-decoration-line-through text-muted" style="font-size:0.7rem;">${window.Flowork.fmtNum(org)}</div>` : ''}
+                    <td class="align-middle text-end p-1">
+                        <div class="fw-bold text-dark" style="font-size:0.8rem;">${window.Flowork.fmtNum(sale)}</div>
+                        ${org > sale ? `<div class="text-decoration-line-through text-muted" style="font-size:0.65rem;">${window.Flowork.fmtNum(org)}</div>` : ''}
                     </td>
                     
-                    <td class="align-middle">
-                        <input type="tel" class="form-control form-control-sm text-center cart-input disc-in px-0" 
+                    <td class="align-middle p-1">
+                        <input type="tel" class="form-control form-control-sm text-center cart-input disc-in p-0 m-0" 
                                value="${item.discount_amount}" data-idx="${idx}" readonly 
-                               style="width: 100%; font-weight:bold; color:#eb6864; background:#f8f9fa; border:1px solid #ced4da;">
-                        ${discountRate > 0 ? `<div class="small text-danger fw-bold" style="font-size:0.7rem; margin-top:2px;">-${discountRate}%</div>` : ''}
+                               style="width: 100%; height: 24px; font-size: 0.8rem; font-weight:bold; color:#eb6864; background:#f8f9fa;">
+                        ${discountRate > 0 ? `<div class="text-danger fw-bold" style="font-size:0.65rem;">-${discountRate}%</div>` : ''}
                     </td>
                     
-                    <td class="align-middle">
-                        <div class="input-group input-group-sm flex-nowrap justify-content-center">
-                            <button class="btn btn-outline-secondary px-1 btn-qty-dec" type="button" data-idx="${idx}" style="width:24px;"><i class="bi bi-dash"></i></button>
-                            <input type="text" class="form-control text-center px-0 fw-bold bg-white" value="${item.quantity}" readonly style="max-width:36px; font-size:0.9rem;">
-                            <button class="btn btn-outline-secondary px-1 btn-qty-inc" type="button" data-idx="${idx}" style="width:24px;"><i class="bi bi-plus"></i></button>
+                    <td class="align-middle p-1">
+                        <div class="input-group input-group-sm flex-nowrap justify-content-center m-0">
+                            <button class="btn btn-outline-secondary btn-qty-dec p-0" type="button" data-idx="${idx}" style="width:24px; height:28px;"><i class="bi bi-dash"></i></button>
+                            <input type="text" class="form-control text-center p-0 fw-bold bg-white m-0" value="${item.quantity}" readonly style="width:30px; height:28px; font-size:0.9rem; flex:none;">
+                            <button class="btn btn-outline-secondary btn-qty-inc p-0" type="button" data-idx="${idx}" style="width:24px; height:28px;"><i class="bi bi-plus"></i></button>
                         </div>
                     </td>
 
-                    <td class="align-middle">
-                        <div class="text-primary fw-bold" style="font-size:0.9rem;">${item.stock}</div>
-                        <div class="text-muted small" style="font-size:0.7rem;">HQ:${item.hq_stock}</div>
+                    <td class="align-middle p-1">
+                        <div class="text-primary fw-bold" style="font-size:0.8rem;">${item.stock}</div>
+                        <div class="text-muted" style="font-size:0.65rem;">HQ:${item.hq_stock}</div>
                     </td>
                     
-                    <td class="align-middle">
+                    <td class="align-middle p-1">
                         <button type="button" class="btn btn-link text-danger p-0 btn-del" data-idx="${idx}">
-                            <i class="bi bi-trash-fill fs-5"></i>
+                            <i class="bi bi-trash-fill" style="font-size: 1.1rem;"></i>
                         </button>
                     </td>
                 `;
